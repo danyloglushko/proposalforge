@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth (NextAuth) ──────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Users & Billing ─────────────────────────────────────────────────────────
+
+enum PlanTier {
+  FREE
+  SOLO
+  PRO
+  AGENCY
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String?   @unique
+  emailVerified  DateTime?
+  image          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Billing
+  stripeCustomerId       String?   @unique
+  stripePriceId          String?
+  stripeSubscriptionId   String?   @unique
+  stripeCurrentPeriodEnd DateTime?
+  planTier               PlanTier  @default(FREE)
+  proposalsThisMonth     Int       @default(0)
+  proposalMonthReset     DateTime  @default(now())
+
+  accounts   Account[]
+  sessions   Session[]
+  proposals  Proposal[]
+  templates  Template[]
+
+  @@index([stripeCustomerId])
+}
+
+// ─── Proposals ───────────────────────────────────────────────────────────────
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+  PAID
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  userId      String
+  title       String
+  clientName  String
+  clientEmail String?
+  jobBrief    String         @db.Text
+  content     String         @db.Text
+  status      ProposalStatus @default(DRAFT)
+  totalAmount Float?
+  currency    String         @default("USD")
+  validUntil  DateTime?
+  publicToken String         @unique @default(cuid())
+  viewedAt    DateTime?
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signature  Signature?
+  payment    Payment?
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id])
+
+  @@index([userId])
+  @@index([publicToken])
+}
+
+// ─── E-Signature ─────────────────────────────────────────────────────────────
+
+model Signature {
+  id          String   @id @default(cuid())
+  proposalId  String   @unique
+  signerName  String
+  signerEmail String
+  ipAddress   String?
+  userAgent   String?
+  signedAt    DateTime @default(now())
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+
+enum PaymentType {
+  DEPOSIT
+  FULL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  proposalId              String        @unique
+  stripePaymentIntentId   String?       @unique
+  stripeCheckoutSessionId String?       @unique
+  amount                  Float
+  currency                String        @default("USD")
+  type                    PaymentType   @default(DEPOSIT)
+  status                  PaymentStatus @default(PENDING)
+  paidAt                  DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
+
+// ─── Templates ───────────────────────────────────────────────────────────────
+
+enum TemplateCategory {
+  DEVELOPMENT
+  DESIGN
+  MARKETING
+  CONSULTING
+  COPYWRITING
+  SEO
+  VIDEO
+  PHOTOGRAPHY
+  GENERAL
+}
+
+model Template {
+  id          String           @id @default(cuid())
+  userId      String?
+  name        String
+  description String?
+  category    TemplateCategory @default(GENERAL)
+  content     String           @db.Text
+  isPublic    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  proposals Proposal[]
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+// ─── Billing Events (webhook log) ────────────────────────────────────────────
+
+model BillingEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  payload       Json
+  processedAt   DateTime @default(now())
+
+  @@index([stripeEventId])
+}
