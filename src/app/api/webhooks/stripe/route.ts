@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     data: {
       stripeEventId: event.id,
       type: event.type,
-      payload: event as unknown as Record<string, unknown>,
+      payload: JSON.parse(JSON.stringify(event)),
     },
   });
 
@@ -91,9 +91,10 @@ async function handleSubscriptionCheckoutCompleted(
   const subscriptionId = session.subscription as string;
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const priceId = subscription.items.data[0].price.id;
+  const item = subscription.items.data[0];
+  const priceId = item.price.id;
   const planTier = getPlanByPriceId(priceId) ?? "SOLO";
-  const periodEnd = new Date(subscription.current_period_end * 1000);
+  const periodEnd = new Date(item.current_period_end * 1000);
 
   await prisma.user.updateMany({
     where: { stripeCustomerId: customerId },
@@ -108,13 +109,17 @@ async function handleSubscriptionCheckoutCompleted(
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const customerId = invoice.customer as string;
-  const subscriptionId = invoice.subscription as string;
+  const subscriptionId =
+    invoice.parent?.type === "subscription_details"
+      ? (invoice.parent.subscription_details?.subscription as string | undefined)
+      : undefined;
   if (!subscriptionId) return;
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const priceId = subscription.items.data[0].price.id;
+  const item = subscription.items.data[0];
+  const priceId = item.price.id;
   const planTier = getPlanByPriceId(priceId) ?? "SOLO";
-  const periodEnd = new Date(subscription.current_period_end * 1000);
+  const periodEnd = new Date(item.current_period_end * 1000);
 
   await prisma.user.updateMany({
     where: { stripeCustomerId: customerId },
@@ -128,9 +133,10 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
-  const priceId = subscription.items.data[0].price.id;
+  const item = subscription.items.data[0];
+  const priceId = item.price.id;
   const planTier = getPlanByPriceId(priceId) ?? "SOLO";
-  const periodEnd = new Date(subscription.current_period_end * 1000);
+  const periodEnd = new Date(item.current_period_end * 1000);
 
   await prisma.user.updateMany({
     where: { stripeCustomerId: customerId },

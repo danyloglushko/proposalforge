@@ -19,6 +19,7 @@ export async function POST(
   // Verify public token matches
   const proposal = await prisma.proposal.findFirst({
     where: { id, publicToken },
+    include: { signature: true },
   });
 
   if (!proposal) {

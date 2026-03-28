@@ -6,8 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createStripeCustomer } from "@/lib/stripe";
 
 export const authOptions: NextAuthOptions = {
-  // @ts-expect-error — PrismaAdapter types are slightly off with next-auth v4
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -29,7 +28,6 @@ export const authOptions: NextAuthOptions = {
     session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        // @ts-expect-error — planTier not in default session type
         session.user.planTier = (user as { planTier?: string }).planTier ?? "FREE";
       }
       return session;

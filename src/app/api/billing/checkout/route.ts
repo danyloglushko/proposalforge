@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { stripe, createCheckoutSession, createStripeCustomer, PLANS } from "@/lib/stripe";
+import { createCheckoutSession, createStripeCustomer, PLANS } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { PlanTier } from "@prisma/client";
 
