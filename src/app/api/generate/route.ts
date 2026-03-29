@@ -21,6 +21,13 @@ export async function POST(req: Request) {
     );
   }
 
+  if (jobBrief.length > 10000) {
+    return NextResponse.json(
+      { error: "Job brief is too long (maximum 10,000 characters)" },
+      { status: 400 }
+    );
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { name: true, planTier: true },

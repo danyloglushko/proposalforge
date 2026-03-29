@@ -23,7 +23,7 @@ export default async function DashboardPage({
 
   const { upgraded } = await searchParams;
 
-  const [user, proposals] = await Promise.all([
+  const [user, proposals, statsAgg] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -48,17 +48,20 @@ export default async function DashboardPage({
         publicToken: true,
       },
     }),
+    prisma.proposal.groupBy({
+      by: ["status"],
+      where: { userId: session.user.id },
+      _count: { id: true },
+      _sum: { totalAmount: true },
+    }),
   ]);
 
+  type StatGroup = { status: string; _count: { id: number }; _sum: { totalAmount: number | null } };
   const stats = {
-    total: proposals.length,
-    sent: proposals.filter((p) => p.status !== "DRAFT").length,
-    accepted: proposals.filter((p) =>
-      ["ACCEPTED", "PAID"].includes(p.status)
-    ).length,
-    revenue: proposals
-      .filter((p) => p.status === "PAID")
-      .reduce((sum, p) => sum + (p.totalAmount ?? 0), 0),
+    total: statsAgg.reduce((s: number, g: StatGroup) => s + g._count.id, 0),
+    sent: statsAgg.filter((g: StatGroup) => g.status !== "DRAFT").reduce((s: number, g: StatGroup) => s + g._count.id, 0),
+    accepted: statsAgg.filter((g: StatGroup) => ["ACCEPTED", "PAID"].includes(g.status)).reduce((s: number, g: StatGroup) => s + g._count.id, 0),
+    revenue: statsAgg.filter((g: StatGroup) => g.status === "PAID").reduce((s: number, g: StatGroup) => s + (g._sum.totalAmount ?? 0), 0),
   };
 
   return (

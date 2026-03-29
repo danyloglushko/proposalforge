@@ -139,12 +139,9 @@ export default function ClientPortalPage() {
             </div>
           )}
 
-          <div
-            className="prose prose-gray max-w-none"
-            dangerouslySetInnerHTML={{
-              __html: proposal.content.replace(/\n/g, "<br/>"),
-            }}
-          />
+          <div className="prose prose-gray max-w-none text-sm whitespace-pre-wrap">
+            {proposal.content}
+          </div>
         </div>
 
         {/* E-signature block */}

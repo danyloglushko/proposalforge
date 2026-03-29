@@ -56,6 +56,15 @@ export async function POST(
       ? Math.round((proposal.totalAmount * depositPercent) / 100) * 100
       : Math.round(proposal.totalAmount * 100);
 
+
+  // Stripe minimum charge is $0.50 USD (50 cents)
+  if (amount < 50) {
+    return NextResponse.json(
+      { error: "Payment amount too small. Minimum charge is $0.50. Please increase the proposal total or deposit percentage." },
+      { status: 400 }
+    );
+  }
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const checkoutSession = await createProposalPaymentSession({
