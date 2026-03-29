@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 interface Proposal {
   id: string;
@@ -188,8 +189,8 @@ export default function ProposalDetailPage() {
         <div className="grid grid-cols-3 gap-4">
           {/* Proposal content */}
           <div className="col-span-2 bg-white rounded-xl border shadow-sm p-8">
-            <div className="prose prose-gray max-w-none text-sm whitespace-pre-wrap">
-              {proposal.content}
+            <div className="prose prose-gray prose-sm max-w-none">
+              <ReactMarkdown>{proposal.content}</ReactMarkdown>
             </div>
           </div>
 

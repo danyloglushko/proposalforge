@@ -68,6 +68,7 @@ export default function PricingPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [annual, setAnnual] = useState(false);
 
   async function handleUpgrade(tier: string) {
     if (tier === "FREE") return;
@@ -123,6 +124,18 @@ export default function PricingPage() {
             Start free. Upgrade when you need more.
           </p>
           <p className="text-sm text-indigo-600 mt-1">14-day free trial on paid plans</p>
+          <div className="flex items-center justify-center gap-3 text-sm mt-4">
+            <span className={!annual ? "text-gray-900 font-medium" : "text-gray-400"}>Monthly</span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${annual ? "bg-indigo-600" : "bg-gray-200"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${annual ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+            <span className={annual ? "text-gray-900 font-medium" : "text-gray-400"}>
+              Annual <span className="text-green-600 font-semibold">Save 17%</span>
+            </span>
+          </div>
         </div>
 
         {error && (
@@ -152,10 +165,10 @@ export default function PricingPage() {
               </div>
               <div>
                 <span className="text-3xl font-bold text-gray-900">
-                  {plan.price === 0 ? "Free" : `$${plan.price}`}
+                  {plan.price === 0 ? "Free" : annual ? `$${Math.round(plan.price * 10 / 12)}` : `$${plan.price}`}
                 </span>
                 {plan.price > 0 && (
-                  <span className="text-gray-400 text-sm">/month</span>
+                  <span className="text-gray-400 text-sm">/month{annual ? ", billed annually" : ""}</span>
                 )}
               </div>
               <ul className="space-y-2">

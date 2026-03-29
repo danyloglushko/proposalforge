@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 
 interface Proposal {
   id: string;
@@ -115,7 +116,7 @@ export default function ClientPortalPage() {
         )}
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+      <div id="top" className="max-w-3xl mx-auto px-6 pb-32 pt-12 space-y-8">
         {paymentSuccess && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
             Payment received — thank you!
@@ -125,7 +126,12 @@ export default function ClientPortalPage() {
         {/* Proposal content */}
         <div className="bg-white rounded-xl shadow-sm border p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{proposal.title}</h1>
-          <p className="text-gray-500 text-sm mb-6">Prepared for {proposal.clientName}</p>
+          <p className="text-gray-500 text-sm">Prepared for {proposal.clientName}</p>
+          {proposal.validUntil && (
+            <p className="text-xs text-amber-600 font-medium mt-1 mb-4">
+              Valid until {new Date(proposal.validUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </p>
+          )}
 
           {proposal.totalAmount && (
             <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
@@ -139,14 +145,14 @@ export default function ClientPortalPage() {
             </div>
           )}
 
-          <div className="prose prose-gray max-w-none text-sm whitespace-pre-wrap">
-            {proposal.content}
+          <div className="prose prose-gray max-w-none">
+            <ReactMarkdown>{proposal.content}</ReactMarkdown>
           </div>
         </div>
 
         {/* E-signature block */}
         {!isSigned && !isDeclined && (
-          <div className="bg-white rounded-xl shadow-sm border p-8">
+          <div id="accept-proposal" className="bg-white rounded-xl shadow-sm border p-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Accept This Proposal
             </h2>
@@ -193,18 +199,40 @@ export default function ClientPortalPage() {
         )}
 
         {isSigned && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-            <div className="text-3xl mb-2">✓</div>
-            <h3 className="font-semibold text-green-900">Proposal Accepted</h3>
-            <p className="text-sm text-green-700 mt-1">
-              Signed by {proposal.signature?.signerName} on{" "}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center space-y-3">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-green-900">Proposal Accepted</h3>
+            <p className="text-sm text-green-700">
+              Signed by <strong>{proposal.signature?.signerName}</strong> on{" "}
               {proposal.signature?.signedAt
-                ? new Date(proposal.signature.signedAt).toLocaleDateString()
+                ? new Date(proposal.signature.signedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
                 : "today"}
             </p>
+            <p className="text-xs text-green-600">A copy of this agreement has been recorded.</p>
           </div>
         )}
       </div>
+
+      {/* Sticky Accept CTA */}
+      {!isSigned && !isDeclined && (
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            {proposal.totalAmount && (
+              <p className="text-sm font-semibold text-gray-900">
+                {new Intl.NumberFormat("en-US", { style: "currency", currency: proposal.currency }).format(proposal.totalAmount)}
+              </p>
+            )}
+            <p className="text-xs text-gray-500">Scroll to review, then accept below</p>
+          </div>
+          <a href="#accept-proposal" className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+            Accept Proposal
+          </a>
+        </div>
+      )}
     </div>
   );
 }

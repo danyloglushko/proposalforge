@@ -136,6 +136,23 @@ export default function NewProposalPage() {
           </div>
         )}
 
+        {/* Step progress indicator */}
+        <div className="flex items-center gap-2 text-sm">
+          <div className={`flex items-center gap-1.5 ${step === "brief" ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step === "edit" ? "bg-green-500 text-white" : "bg-indigo-600 text-white"
+            }`}>{step === "edit" ? "✓" : "1"}</span>
+            Project Brief
+          </div>
+          <span className="text-gray-300 mx-1">—</span>
+          <div className={`flex items-center gap-1.5 ${step === "edit" ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step === "edit" ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
+            }`}>2</span>
+            Review &amp; Save
+          </div>
+        </div>
+
         {/* Step 1: Brief */}
         {step === "brief" && (
           <form onSubmit={handleGenerate} className="bg-white rounded-xl border shadow-sm p-8 space-y-5">
@@ -265,7 +282,7 @@ export default function NewProposalPage() {
                 rows={24}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full border rounded-lg px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 placeholder="Generating your proposal..."
               />
             </div>

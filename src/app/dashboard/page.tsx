@@ -151,13 +151,17 @@ export default async function DashboardPage({
           </div>
 
           {proposals.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-400 text-lg">No proposals yet</p>
+            <div className="text-center py-16 space-y-4">
+              <div className="text-5xl">📋</div>
+              <div>
+                <p className="text-gray-700 font-medium">No proposals yet</p>
+                <p className="text-gray-400 text-sm mt-1">Create your first proposal in under 2 minutes</p>
+              </div>
               <Link
                 href="/dashboard/proposals/new"
-                className="mt-4 inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
+                className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition font-medium"
               >
-                Create your first proposal
+                Create your first proposal →
               </Link>
             </div>
           ) : (
@@ -190,7 +194,7 @@ export default async function DashboardPage({
                           STATUS_COLORS[p.status] ?? "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {p.status}
+                        {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-gray-700">

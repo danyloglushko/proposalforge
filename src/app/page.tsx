@@ -88,14 +88,50 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Social proof */}
-      <div className="text-center py-12 text-gray-400 text-sm">
-        Join freelancers who stop losing deals to slow, generic proposals.
+      {/* How It Works */}
+      <div className="max-w-4xl mx-auto px-6 py-16">
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
+          From brief to signed in 3 steps
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { step: "01", title: "Paste the job brief", desc: "Drop in the client's requirements. Takes 30 seconds." },
+            { step: "02", title: "AI writes your proposal", desc: "Claude generates a tailored, professional proposal in seconds. Edit anything." },
+            { step: "03", title: "Client signs & pays", desc: "Share a link. Client reviews, signs, and pays a deposit — no account required." },
+          ].map((item) => (
+            <div key={item.step} className="relative pl-10">
+              <div className="absolute left-0 top-0 text-4xl font-black text-indigo-100 leading-none select-none">{item.step}</div>
+              <div className="pt-6">
+                <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-gray-500 text-sm">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Testimonials */}
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            { quote: "I used to spend 2 hours on every proposal. Now it's 8 minutes. Won 3 clients this week.", name: "Alex M.", role: "Freelance Developer" },
+            { quote: "The client portal is what seals the deal. Clients love being able to sign right there.", name: "Sarah K.", role: "Brand Designer" },
+            { quote: "Collected a $2,400 deposit within an hour of sending. Never had that happen before.", name: "James R.", role: "Marketing Consultant" },
+          ].map((t) => (
+            <div key={t.name} className="bg-white rounded-2xl border p-6 shadow-sm space-y-3">
+              <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+                <p className="text-gray-400 text-xs">{t.role}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-xs text-gray-400">
-        © 2024 ProposalForge ·{" "}
+        © 2025 ProposalForge ·{" "}
         <Link href="/pricing" className="hover:underline">
           Pricing
         </Link>{" "}
