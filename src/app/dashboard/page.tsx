@@ -13,15 +13,18 @@ const STATUS_COLORS: Record<string, string> = {
   DECLINED: "bg-red-100 text-red-700",
 };
 
+const PAGE_SIZE = 20;
+
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ upgraded?: string }>;
+  searchParams: Promise<{ upgraded?: string; page?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
-  const { upgraded } = await searchParams;
+  const { upgraded, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
 
   const [user, proposals, statsAgg] = await Promise.all([
     prisma.user.findUnique({
@@ -35,7 +38,8 @@ export default async function DashboardPage({
     prisma.proposal.findMany({
       where: { userId: session.user.id },
       orderBy: { updatedAt: "desc" },
-      take: 50,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
       select: {
         id: true,
         title: true,
@@ -221,6 +225,30 @@ export default async function DashboardPage({
                 ))}
               </tbody>
             </table>
+          )}
+          {/* Pagination */}
+          {(page > 1 || proposals.length === PAGE_SIZE) && (
+            <div className="px-6 py-4 border-t flex items-center justify-between text-sm text-gray-500">
+              <span>Page {page}</span>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Link
+                    href={`/dashboard?page=${page - 1}${upgraded ? "&upgraded=true" : ""}`}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    ← Previous
+                  </Link>
+                )}
+                {proposals.length === PAGE_SIZE && (
+                  <Link
+                    href={`/dashboard?page=${page + 1}${upgraded ? "&upgraded=true" : ""}`}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Next →
+                  </Link>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

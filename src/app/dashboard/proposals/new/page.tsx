@@ -131,8 +131,14 @@ export default function NewProposalPage() {
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
-            {error}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm flex items-start justify-between gap-2">
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-600 font-bold text-lg leading-none shrink-0"
+            >
+              &times;
+            </button>
           </div>
         )}
 

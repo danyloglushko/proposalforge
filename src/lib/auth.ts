@@ -25,10 +25,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    session({ session, user }) {
+    async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        session.user.planTier = (user as { planTier?: string }).planTier ?? "FREE";
+        // Always fetch planTier fresh from DB so upgrades are reflected immediately
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { planTier: true },
+        });
+        session.user.planTier = dbUser?.planTier ?? "FREE";
       }
       return session;
     },

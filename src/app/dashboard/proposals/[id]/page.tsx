@@ -155,6 +155,13 @@ export default function ProposalDetailPage() {
           >
             Preview ↗
           </a>
+          <a
+            href={`/api/proposals/${id}/export`}
+            download
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+          >
+            Download .docx
+          </a>
           {["ACCEPTED"].includes(proposal.status) && !proposal.payment && (
             <>
               <button
@@ -176,13 +183,21 @@ export default function ProposalDetailPage() {
         </div>
 
         {paymentError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            {paymentError}
-            {paymentError.includes("Pro") && (
-              <Link href="/pricing" className="ml-2 underline font-medium">
-                Upgrade plan →
-              </Link>
-            )}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex items-start justify-between gap-2">
+            <span>
+              {paymentError}
+              {paymentError.includes("Pro") && (
+                <Link href="/pricing" className="ml-2 underline font-medium">
+                  Upgrade plan →
+                </Link>
+              )}
+            </span>
+            <button
+              onClick={() => setPaymentError(null)}
+              className="text-red-400 hover:text-red-600 font-bold text-lg leading-none shrink-0"
+            >
+              &times;
+            </button>
           </div>
         )}
 
