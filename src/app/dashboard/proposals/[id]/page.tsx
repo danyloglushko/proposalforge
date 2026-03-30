@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
+import ProposalDocument from "@/components/ProposalDocument";
+import type { ProposalStructure } from "@/types/proposal";
 
 interface Proposal {
   id: string;
   title: string;
   clientName: string;
   clientEmail: string | null;
-  content: string;
+  content: ProposalStructure;
   status: string;
   totalAmount: number | null;
   currency: string;
@@ -155,6 +156,12 @@ export default function ProposalDetailPage() {
           >
             Preview ↗
           </a>
+          <a
+            href={`/api/proposals/${id}/export`}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+          >
+            Download DOCX
+          </a>
           {["ACCEPTED"].includes(proposal.status) && !proposal.payment && (
             <>
               <button
@@ -189,9 +196,7 @@ export default function ProposalDetailPage() {
         <div className="grid grid-cols-3 gap-4">
           {/* Proposal content */}
           <div className="col-span-2 bg-white rounded-xl border shadow-sm p-8">
-            <div className="prose prose-gray prose-sm max-w-none">
-              <ReactMarkdown>{proposal.content}</ReactMarkdown>
-            </div>
+            <ProposalDocument proposal={proposal.content} />
           </div>
 
           {/* Sidebar */}

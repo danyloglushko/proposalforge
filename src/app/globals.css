@@ -25,3 +25,21 @@ body {
     text-wrap: balance;
   }
 }
+
+@page {
+  margin: 1in;
+}
+
+@media print {
+  .cover-section {
+    page-break-after: always;
+  }
+  table {
+    page-break-inside: avoid;
+  }
+  nav,
+  .sticky-cta,
+  button {
+    display: none !important;
+  }
+}

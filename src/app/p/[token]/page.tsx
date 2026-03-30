@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import ReactMarkdown from "react-markdown";
+import ProposalDocument from "@/components/ProposalDocument";
+import type { ProposalStructure } from "@/types/proposal";
 
 interface Proposal {
   id: string;
   title: string;
   clientName: string;
-  content: string;
+  content: ProposalStructure;
   totalAmount: number | null;
   currency: string;
   validUntil: string | null;
@@ -125,11 +126,14 @@ export default function ClientPortalPage() {
 
         {/* Proposal content */}
         <div className="bg-white rounded-xl shadow-sm border p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{proposal.title}</h1>
-          <p className="text-gray-500 text-sm">Prepared for {proposal.clientName}</p>
           {proposal.validUntil && (
-            <p className="text-xs text-amber-600 font-medium mt-1 mb-4">
-              Valid until {new Date(proposal.validUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            <p className="text-xs text-amber-600 font-medium mb-4">
+              Valid until{" "}
+              {new Date(proposal.validUntil).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
             </p>
           )}
 
@@ -145,9 +149,7 @@ export default function ClientPortalPage() {
             </div>
           )}
 
-          <div className="prose prose-gray max-w-none">
-            <ReactMarkdown>{proposal.content}</ReactMarkdown>
-          </div>
+          <ProposalDocument proposal={proposal.content} />
         </div>
 
         {/* E-signature block */}
@@ -209,7 +211,11 @@ export default function ClientPortalPage() {
             <p className="text-sm text-green-700">
               Signed by <strong>{proposal.signature?.signerName}</strong> on{" "}
               {proposal.signature?.signedAt
-                ? new Date(proposal.signature.signedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                ? new Date(proposal.signature.signedAt).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
                 : "today"}
             </p>
             <p className="text-xs text-green-600">A copy of this agreement has been recorded.</p>
@@ -219,16 +225,22 @@ export default function ClientPortalPage() {
 
       {/* Sticky Accept CTA */}
       {!isSigned && !isDeclined && (
-        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-10">
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-10 sticky-cta">
           <div>
             {proposal.totalAmount && (
               <p className="text-sm font-semibold text-gray-900">
-                {new Intl.NumberFormat("en-US", { style: "currency", currency: proposal.currency }).format(proposal.totalAmount)}
+                {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: proposal.currency,
+                }).format(proposal.totalAmount)}
               </p>
             )}
             <p className="text-xs text-gray-500">Scroll to review, then accept below</p>
           </div>
-          <a href="#accept-proposal" className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+          <a
+            href="#accept-proposal"
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+          >
             Accept Proposal
           </a>
         </div>

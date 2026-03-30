@@ -96,7 +96,7 @@ model Proposal {
   clientName  String
   clientEmail String?
   jobBrief    String         @db.Text
-  content     String         @db.Text
+  content     Json
   status      ProposalStatus @default(DRAFT)
   totalAmount Float?
   currency    String         @default("USD")
