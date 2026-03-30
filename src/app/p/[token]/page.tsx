@@ -5,6 +5,11 @@ import { useParams, useSearchParams } from "next/navigation";
 import ProposalDocument from "@/components/ProposalDocument";
 import type { ProposalStructure } from "@/types/proposal";
 
+interface Branding {
+  logoUrl: string | null;
+  hidePoweredBy: boolean;
+}
+
 interface Proposal {
   id: string;
   title: string;
@@ -17,6 +22,7 @@ interface Proposal {
   signature: { signerName: string; signedAt: string } | null;
   payment: { status: string; amount: number } | null;
   publicToken: string;
+  branding: Branding;
 }
 
 export default function ClientPortalPage() {
@@ -79,16 +85,25 @@ export default function ClientPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
         <div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
+        <p className="text-sm text-gray-400">Loading your proposal…</p>
       </div>
     );
   }
 
   if (error || !proposal) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-red-500 text-lg">{error ?? "Proposal not found"}</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
+        <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-sm shadow-sm space-y-3">
+          <div className="text-4xl">🔍</div>
+          <h2 className="text-lg font-semibold text-gray-900">Proposal not found</h2>
+          <p className="text-sm text-gray-500">
+            {error ?? "This link may have expired or been revoked. Contact the sender for a new link."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -96,12 +111,25 @@ export default function ClientPortalPage() {
   const isSigned = !!proposal.signature || signed;
   const isPaid = proposal.payment?.status === "PAID";
   const isDeclined = proposal.status === "DECLINED";
+  const branding = proposal.branding ?? { logoUrl: null, hidePoweredBy: false };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
+        {branding.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={branding.logoUrl}
+            alt="Company logo"
+            className="h-8 object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
+        )}
         {proposal.status && (
           <span
             className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -117,7 +145,7 @@ export default function ClientPortalPage() {
         )}
       </div>
 
-      <div id="top" className="max-w-3xl mx-auto px-6 pb-32 pt-12 space-y-8">
+      <div id="top" className="max-w-3xl mx-auto w-full px-6 pb-32 pt-12 space-y-8 flex-1">
         {paymentSuccess && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
             Payment received — thank you!
@@ -223,24 +251,41 @@ export default function ClientPortalPage() {
         )}
       </div>
 
+      {/* Footer */}
+      {!branding.hidePoweredBy && (
+        <div className="border-t bg-white py-4 text-center">
+          <a
+            href="https://proposalforge.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-400 hover:text-gray-600 transition"
+          >
+            Powered by ProposalForge
+          </a>
+        </div>
+      )}
+
       {/* Sticky Accept CTA */}
       {!isSigned && !isDeclined && (
-        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-10 sticky-cta">
+        <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t shadow-xl px-6 py-4 flex items-center justify-between z-10">
           <div>
             {proposal.totalAmount && (
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-base font-bold text-gray-900">
                 {new Intl.NumberFormat("en-US", {
                   style: "currency",
                   currency: proposal.currency,
                 }).format(proposal.totalAmount)}
               </p>
             )}
-            <p className="text-xs text-gray-500">Scroll to review, then accept below</p>
+            <p className="text-xs text-gray-400 mt-0.5">Review above, then sign below</p>
           </div>
           <a
             href="#accept-proposal"
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-md shadow-indigo-200 flex items-center gap-2"
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
             Accept Proposal
           </a>
         </div>

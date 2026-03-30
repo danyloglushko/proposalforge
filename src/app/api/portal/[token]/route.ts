@@ -15,6 +15,7 @@ export async function GET(
       id: true,
       title: true,
       clientName: true,
+      clientEmail: true,
       content: true,
       totalAmount: true,
       currency: true,
@@ -22,6 +23,7 @@ export async function GET(
       status: true,
       publicToken: true,
       viewedAt: true,
+      viewCount: true,
       signature: {
         select: { signerName: true, signedAt: true },
       },
@@ -29,7 +31,17 @@ export async function GET(
         select: { status: true, amount: true },
       },
       user: {
-        select: { email: true },
+        select: {
+          email: true,
+          planTier: true,
+          profile: {
+            select: {
+              emailNotifications: true,
+              hidePoweredBy: true,
+              logoUrl: true,
+            },
+          },
+        },
       },
     },
   });
@@ -38,15 +50,36 @@ export async function GET(
     return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
   }
 
-  // Record first view and send notification
-  if (!proposal.viewedAt) {
-    await prisma.proposal.updateMany({
-      where: { publicToken: token, viewedAt: null },
-      data: { viewedAt: new Date(), status: "VIEWED" },
-    });
+  const userPlan = proposal.user?.planTier ?? "FREE";
+  const isPro = userPlan === "PRO" || userPlan === "AGENCY";
+  const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
+  const isFirstView = !proposal.viewedAt;
 
-    // Notify freelancer
-    if (proposal.user?.email) {
+  // Always increment view count and track timestamp
+  const updateData: Record<string, unknown> = {
+    viewCount: { increment: 1 },
+    lastViewedAt: new Date(),
+  };
+  if (isFirstView) {
+    updateData.viewedAt = new Date();
+    updateData.status = "VIEWED";
+  }
+
+  await prisma.$transaction([
+    prisma.proposal.update({
+      where: { publicToken: token },
+      data: updateData,
+    }),
+    prisma.proposalView.create({
+      data: { proposalId: proposal.id },
+    }),
+  ]);
+
+  // Send view email notification
+  if (emailNotifications && proposal.user?.email) {
+    // Free tier: only first view; Pro tier: every view
+    const shouldNotify = isPro || isFirstView;
+    if (shouldNotify) {
       const emailData = proposalViewedEmail({
         proposalTitle: proposal.title,
         clientName: proposal.clientName,
@@ -54,32 +87,45 @@ export async function GET(
       });
       await sendEmail({ to: proposal.user.email, ...emailData });
     }
+  }
 
-    // Send expiring soon reminder if within 2 days of validUntil
-    if (proposal.validUntil && proposal.status !== "ACCEPTED" && proposal.status !== "PAID") {
-      const msUntilExpiry = new Date(proposal.validUntil).getTime() - Date.now();
-      const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-      if (msUntilExpiry > 0 && msUntilExpiry <= twoDaysMs) {
-        const { proposalExpiringSoonEmail } = await import("@/lib/email");
+  // Send expiring soon reminder on first view if within 2 days of validUntil
+  if (isFirstView && proposal.validUntil && proposal.status !== "ACCEPTED" && proposal.status !== "PAID") {
+    const msUntilExpiry = new Date(proposal.validUntil).getTime() - Date.now();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    if (msUntilExpiry > 0 && msUntilExpiry <= twoDaysMs) {
+      const { proposalExpiringSoonEmail } = await import("@/lib/email");
+      if (proposal.clientEmail) {
         const expiring = proposalExpiringSoonEmail({
           clientName: proposal.clientName,
           proposalTitle: proposal.title,
           validUntil: new Date(proposal.validUntil),
           portalUrl: `${APP_URL}/p/${token}`,
         });
-        // Find client email from proposal (clientEmail field via full query)
-        const full = await prisma.proposal.findUnique({
-          where: { publicToken: token },
-          select: { clientEmail: true },
-        });
-        if (full?.clientEmail) {
-          await sendEmail({ to: full.clientEmail, ...expiring });
-        }
+        await sendEmail({ to: proposal.clientEmail, ...expiring });
       }
     }
   }
 
-  // Strip internal user data before returning
-  const { user: _user, viewedAt: _viewedAt, ...publicData } = proposal;
-  return NextResponse.json(publicData);
+  // Build branding info for the portal
+  const branding = {
+    logoUrl: proposal.user?.profile?.logoUrl ?? null,
+    hidePoweredBy: isPro && (proposal.user?.profile?.hidePoweredBy ?? false),
+  };
+
+  // Return only public-safe fields
+  return NextResponse.json({
+    id: proposal.id,
+    title: proposal.title,
+    clientName: proposal.clientName,
+    content: proposal.content,
+    totalAmount: proposal.totalAmount,
+    currency: proposal.currency,
+    validUntil: proposal.validUntil,
+    status: proposal.status,
+    publicToken: proposal.publicToken,
+    signature: proposal.signature,
+    payment: proposal.payment,
+    branding,
+  });
 }

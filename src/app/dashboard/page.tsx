@@ -30,6 +30,9 @@ export default async function DashboardPage({
         planTier: true,
         proposalsThisMonth: true,
         stripeCurrentPeriodEnd: true,
+        profile: {
+          select: { onboardingDismissed: true },
+        },
       },
     }),
     prisma.proposal.findMany({
@@ -43,9 +46,12 @@ export default async function DashboardPage({
         status: true,
         totalAmount: true,
         currency: true,
+        viewCount: true,
         createdAt: true,
         updatedAt: true,
         publicToken: true,
+        sentAt: true,
+        signature: { select: { id: true } },
       },
     }),
     prisma.proposal.groupBy({
@@ -64,6 +70,16 @@ export default async function DashboardPage({
   const acceptanceRate = sent > 0 ? Math.round((accepted / sent) * 100) : 0;
 
   const stats = { sent, accepted, collected, pending, acceptanceRate };
+
+  // Onboarding checklist state
+  const onboardingDismissed = user?.profile?.onboardingDismissed ?? false;
+  const hasSentProposal = proposals.some((p) => p.sentAt !== null);
+  const hasSignature = proposals.some((p) => p.signature !== null);
+  const hasCreatedProposal = proposals.length > 0;
+  const allDone = hasCreatedProposal && hasSentProposal && hasSignature;
+  const showOnboarding = !onboardingDismissed && !allDone;
+
+  const isPro = user?.planTier === "PRO" || user?.planTier === "AGENCY";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -95,6 +111,52 @@ export default async function DashboardPage({
         {upgraded && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
             Plan upgraded successfully! Welcome to {user?.planTier}.
+          </div>
+        )}
+
+        {/* Onboarding checklist */}
+        {showOnboarding && (
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-gray-900">Get started with ProposalForge</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Complete these steps to start winning clients.</p>
+              </div>
+              <form action="/api/onboarding/dismiss" method="POST">
+                <button
+                  type="submit"
+                  className="text-xs text-gray-400 hover:text-gray-600 transition"
+                >
+                  Dismiss
+                </button>
+              </form>
+            </div>
+            <div className="space-y-3">
+              {[
+                { done: hasCreatedProposal, label: "Create your first proposal", href: hasCreatedProposal ? undefined : "/dashboard/proposals/new" },
+                { done: hasSentProposal, label: "Send it to a client", href: undefined },
+                { done: hasSignature, label: "Get your first signature", href: undefined },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? "bg-green-500" : "border-2 border-gray-300"}`}>
+                    {item.done && (
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  {item.href ? (
+                    <Link href={item.href} className="text-sm text-indigo-600 hover:underline">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span className={`text-sm ${item.done ? "line-through text-gray-400" : "text-gray-700"}`}>
+                      {item.label}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -221,6 +283,8 @@ export default async function DashboardPage({
                   <th className="px-6 py-3 text-left">Client</th>
                   <th className="px-6 py-3 text-left">Status</th>
                   <th className="px-6 py-3 text-right">Amount</th>
+                  {isPro && <th className="px-6 py-3 text-center">Views</th>}
+                  {!isPro && <th className="px-6 py-3 text-center">Views</th>}
                   <th className="px-6 py-3 text-left">Updated</th>
                   <th className="px-6 py-3" />
                 </tr>
@@ -253,6 +317,15 @@ export default async function DashboardPage({
                             currency: p.currency,
                           }).format(p.totalAmount)
                         : "—"}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {p.viewCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          👁 {p.viewCount}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-gray-400">
                       {new Date(p.updatedAt).toLocaleDateString()}

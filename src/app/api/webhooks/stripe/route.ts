@@ -185,13 +185,19 @@ async function handleProposalPaymentCompleted(
     where: { id: proposalId },
     data: { status: "PAID" },
     include: {
-      user: { select: { email: true } },
+      user: {
+        select: {
+          email: true,
+          profile: { select: { emailNotifications: true } },
+        },
+      },
       payment: { select: { amount: true, currency: true } },
     },
   });
 
-  // Notify freelancer
-  if (proposal.user?.email && proposal.payment) {
+  // Notify freelancer (gated by emailNotifications setting)
+  const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
+  if (emailNotifications && proposal.user?.email && proposal.payment) {
     const emailData = paymentReceivedEmail({
       to: proposal.user.email,
       proposalTitle: proposal.title,

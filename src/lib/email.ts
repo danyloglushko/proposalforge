@@ -1,9 +1,11 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM = process.env.EMAIL_FROM ?? "ProposalForge <noreply@proposalforge.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY ?? "");
+}
 
 export async function sendEmail({
   to,
@@ -15,7 +17,8 @@ export async function sendEmail({
   html: string;
 }) {
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
+    if (!process.env.RESEND_API_KEY) return;
+    await getResend().emails.send({ from: FROM, to, subject, html });
   } catch (err) {
     console.error("[email] failed to send:", err);
   }
@@ -70,12 +73,11 @@ export function proposalViewedEmail({
 }
 
 export function proposalSignedEmail({
-  to,
   proposalTitle,
   signerName,
   dashboardUrl,
 }: {
-  to: string;
+  to?: string;
   proposalTitle: string;
   signerName: string;
   dashboardUrl: string;
@@ -94,13 +96,12 @@ export function proposalSignedEmail({
 }
 
 export function paymentReceivedEmail({
-  to,
   proposalTitle,
   amount,
   currency,
   dashboardUrl,
 }: {
-  to: string;
+  to?: string;
   proposalTitle: string;
   amount: number;
   currency: string;

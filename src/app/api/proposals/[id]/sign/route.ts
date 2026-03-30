@@ -20,7 +20,15 @@ export async function POST(
   // Verify public token matches
   const proposal = await prisma.proposal.findFirst({
     where: { id, publicToken },
-    include: { signature: true, user: { select: { email: true } } },
+    include: {
+      signature: true,
+      user: {
+        select: {
+          email: true,
+          profile: { select: { emailNotifications: true } },
+        },
+      },
+    },
   });
 
   if (!proposal) {
@@ -59,8 +67,9 @@ export async function POST(
     }),
   ]);
 
-  // Send signed notification to freelancer
-  if (proposal.user?.email) {
+  // Send signed notification to freelancer (gated by emailNotifications setting)
+  const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
+  if (emailNotifications && proposal.user?.email) {
     const emailData = proposalSignedEmail({
       to: proposal.user.email,
       proposalTitle: proposal.title,

@@ -141,6 +141,7 @@ export async function GET(
           bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
           insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
         },
@@ -173,6 +174,7 @@ export async function GET(
           bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
           insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
         },
@@ -211,6 +213,7 @@ export async function GET(
           bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
+          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
           insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
           insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
         },
@@ -315,7 +318,7 @@ export async function GET(
     .replace(/-+/g, "-")
     .toLowerCase();
 
-  return new Response(buffer, {
+  return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

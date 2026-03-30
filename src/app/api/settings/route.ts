@@ -9,11 +9,12 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const profile = await prisma.userProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  const [profile, user] = await Promise.all([
+    prisma.userProfile.findUnique({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { planTier: true } }),
+  ]);
 
-  return NextResponse.json(profile ?? {});
+  return NextResponse.json({ ...(profile ?? {}), planTier: user?.planTier ?? "FREE" });
 }
 
 export async function PATCH(req: Request) {
@@ -22,8 +23,16 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { companyName, freelancerName, contactEmail, logoUrl, defaultCurrency } =
-    await req.json();
+  const {
+    companyName,
+    freelancerName,
+    contactEmail,
+    logoUrl,
+    defaultCurrency,
+    emailNotifications,
+    hidePoweredBy,
+    onboardingDismissed,
+  } = await req.json();
 
   const profile = await prisma.userProfile.upsert({
     where: { userId: session.user.id },
@@ -34,13 +43,19 @@ export async function PATCH(req: Request) {
       contactEmail,
       logoUrl,
       defaultCurrency: defaultCurrency ?? "USD",
+      emailNotifications: emailNotifications ?? true,
+      hidePoweredBy: hidePoweredBy ?? false,
+      onboardingDismissed: onboardingDismissed ?? false,
     },
     update: {
-      companyName,
-      freelancerName,
-      contactEmail,
-      logoUrl,
-      defaultCurrency: defaultCurrency ?? "USD",
+      ...(companyName !== undefined && { companyName }),
+      ...(freelancerName !== undefined && { freelancerName }),
+      ...(contactEmail !== undefined && { contactEmail }),
+      ...(logoUrl !== undefined && { logoUrl }),
+      ...(defaultCurrency !== undefined && { defaultCurrency }),
+      ...(emailNotifications !== undefined && { emailNotifications }),
+      ...(hidePoweredBy !== undefined && { hidePoweredBy }),
+      ...(onboardingDismissed !== undefined && { onboardingDismissed }),
     },
   });
 

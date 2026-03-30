@@ -17,34 +17,39 @@ const CATEGORIES = [
   "GENERAL",
 ];
 
-const TEMPLATES: { name: string; category: string; brief: string }[] = [
+const TEMPLATES: { name: string; category: string; brief: string; icon: string }[] = [
   {
     name: "Web Development",
     category: "DEVELOPMENT",
+    icon: "💻",
     brief:
       "Build a modern, responsive website including custom design, CMS integration, and deployment. Deliverables include homepage, inner pages, contact form, SEO setup, and 1-month post-launch support.",
   },
   {
     name: "Brand Design",
     category: "DESIGN",
+    icon: "🎨",
     brief:
       "Create a complete brand identity including logo, colour palette, typography system, brand guidelines document, and social media kit. Deliverables: 3 logo concepts, 2 revision rounds, final files in all formats.",
   },
   {
     name: "Marketing Campaign",
     category: "MARKETING",
+    icon: "📣",
     brief:
       "Plan and execute a multi-channel digital marketing campaign covering paid social, email sequences, and content calendar. Includes strategy document, ad creatives, copy, reporting, and campaign optimisation over 3 months.",
   },
   {
     name: "Business Consulting",
     category: "CONSULTING",
+    icon: "📊",
     brief:
       "Conduct a business analysis engagement covering operational review, competitive landscape, growth opportunities, and a 90-day action plan. Deliverables: discovery workshop, findings report, and executive presentation.",
   },
   {
     name: "Software Audit",
     category: "DEVELOPMENT",
+    icon: "🔍",
     brief:
       "Perform a comprehensive audit of an existing software system covering code quality, security vulnerabilities, performance bottlenecks, and technical debt. Deliverables: audit report with priority-ranked recommendations and remediation roadmap.",
   },
@@ -264,7 +269,7 @@ export default function NewProposalPage() {
                 </button>
               </div>
               {showTemplates && (
-                <div className="mb-2 grid grid-cols-1 gap-2">
+                <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {TEMPLATES.map((t) => (
                     <button
                       key={t.name}
@@ -274,11 +279,16 @@ export default function NewProposalPage() {
                         setCategory(t.category);
                         setShowTemplates(false);
                       }}
-                      className="text-left px-3 py-2 border rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition text-sm"
+                      className="text-left px-4 py-3 border rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition group"
                     >
-                      <span className="font-medium text-gray-900">{t.name}</span>
-                      <span className="ml-2 text-xs text-gray-400">{t.category.charAt(0) + t.category.slice(1).toLowerCase()}</span>
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{t.brief}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-lg">{t.icon}</span>
+                        <span className="font-medium text-gray-900 text-sm group-hover:text-indigo-700">{t.name}</span>
+                        <span className="ml-auto text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
+                          {t.category.charAt(0) + t.category.slice(1).toLowerCase()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{t.brief}</p>
                     </button>
                   ))}
                 </div>
