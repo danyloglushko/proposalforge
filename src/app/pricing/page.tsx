@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import LaunchBanner from "@/components/LaunchBanner";
 
 const PLANS = [
   {
@@ -143,6 +144,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+      <LaunchBanner />
       <nav className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
         <Link href="/" className="text-xl font-bold text-indigo-600">
           ProposalForge

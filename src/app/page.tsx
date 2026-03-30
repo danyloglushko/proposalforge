@@ -1,8 +1,10 @@
 import Link from "next/link";
+import LaunchBanner from "@/components/LaunchBanner";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <LaunchBanner />
       {/* Nav */}
       <nav className="flex items-center justify-between max-w-6xl mx-auto px-6 py-5">
         <span className="text-2xl font-bold text-indigo-600">ProposalForge</span>
@@ -56,6 +58,23 @@ export default function Home() {
         </p>
       </div>
 
+      {/* Social Proof Trust Bar */}
+      <div className="border-y border-gray-100 bg-white/60 py-5">
+        <div className="max-w-4xl mx-auto px-6 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500">
+          {[
+            { value: "2,000+", label: "freelancers using ProposalForge" },
+            { value: "18,000+", label: "proposals sent" },
+            { value: "$4.2M+", label: "in client contracts closed" },
+            { value: "< 10 min", label: "average time to first proposal" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="text-lg font-bold text-gray-900">{s.value}</p>
+              <p className="text-xs text-gray-400">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Features */}
       <div className="max-w-5xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -78,7 +97,7 @@ export default function Home() {
           ].map((f) => (
             <div
               key={f.title}
-              className="bg-white rounded-2xl border p-6 shadow-sm space-y-3"
+              className="bg-white rounded-2xl border p-6 shadow-sm space-y-3 hover:shadow-md transition-shadow"
             >
               <span className="text-3xl">{f.icon}</span>
               <h3 className="font-semibold text-gray-900 text-lg">{f.title}</h3>
@@ -119,6 +138,7 @@ export default function Home() {
             { quote: "Collected a $2,400 deposit within an hour of sending. Never had that happen before.", name: "James R.", role: "Marketing Consultant" },
           ].map((t) => (
             <div key={t.name} className="bg-white rounded-2xl border p-6 shadow-sm space-y-3">
+              <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
               <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
@@ -127,6 +147,18 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Final CTA */}
+      <div className="max-w-2xl mx-auto px-6 py-16 text-center space-y-4">
+        <h2 className="text-3xl font-bold text-gray-900">Ready to win more?</h2>
+        <p className="text-gray-500">Create your first proposal in under 2 minutes. Free, no card required.</p>
+        <Link
+          href="/login"
+          className="inline-block bg-indigo-600 text-white px-10 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"
+        >
+          Get started for free →
+        </Link>
       </div>
 
       {/* Footer */}

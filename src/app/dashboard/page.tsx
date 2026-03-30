@@ -101,9 +101,9 @@ export default async function DashboardPage({
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
-            { label: "Sent", value: stats.sent },
-            { label: "Accepted", value: stats.accepted },
-            { label: "Acceptance Rate", value: `${stats.acceptanceRate}%` },
+            { label: "Sent", value: stats.sent, icon: "📤", color: "text-blue-500" },
+            { label: "Accepted", value: stats.accepted, icon: "✅", color: "text-green-500" },
+            { label: "Acceptance Rate", value: `${stats.acceptanceRate}%`, icon: "📈", color: "text-indigo-500" },
             {
               label: "Collected",
               value: new Intl.NumberFormat("en-US", {
@@ -111,6 +111,8 @@ export default async function DashboardPage({
                 currency: "USD",
                 maximumFractionDigits: 0,
               }).format(stats.collected),
+              icon: "💰",
+              color: "text-emerald-500",
             },
             {
               label: "Pending",
@@ -119,14 +121,19 @@ export default async function DashboardPage({
                 currency: "USD",
                 maximumFractionDigits: 0,
               }).format(stats.pending),
+              icon: "⏳",
+              color: "text-amber-500",
             },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="bg-white rounded-xl border p-5 shadow-sm"
+              className="bg-white rounded-xl border p-5 shadow-sm hover:shadow-md transition-shadow"
             >
-              <p className="text-sm text-gray-500">{stat.label}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">{stat.label}</p>
+                <span className="text-lg">{stat.icon}</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
                 {stat.value}
               </p>
             </div>
@@ -134,22 +141,49 @@ export default async function DashboardPage({
         </div>
 
         {/* Plan badge */}
-        <div className="flex items-center gap-3">
-          <span className="bg-indigo-100 text-indigo-700 text-sm font-medium px-3 py-1 rounded-full">
-            {user?.planTier ?? "FREE"} plan
-          </span>
+        <div className="bg-white rounded-xl border shadow-sm px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${
+              user?.planTier === "FREE"
+                ? "bg-gray-100 text-gray-600"
+                : user?.planTier === "PRO" || user?.planTier === "AGENCY"
+                ? "bg-indigo-100 text-indigo-700"
+                : "bg-blue-100 text-blue-700"
+            }`}>
+              {user?.planTier ?? "FREE"}
+            </span>
+            {user?.planTier === "FREE" ? (
+              <div className="flex items-center gap-3">
+                <div>
+                  <p className="text-sm text-gray-700 font-medium">
+                    {user.proposalsThisMonth} / 3 proposals used this month
+                  </p>
+                  <div className="mt-1 w-40 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        user.proposalsThisMonth >= 3 ? "bg-red-400" : "bg-indigo-500"
+                      }`}
+                      style={{ width: `${Math.min(100, (user.proposalsThisMonth / 3) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Unlimited proposals</p>
+            )}
+          </div>
           {user?.planTier === "FREE" && (
-            <>
-              <span className="text-sm text-gray-500">
-                {user.proposalsThisMonth}/3 proposals this month
-              </span>
+            <div className="text-right">
               <Link
                 href="/pricing"
-                className="text-sm text-indigo-600 hover:underline font-medium"
+                className="text-sm bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium inline-block"
               >
                 Upgrade →
               </Link>
-            </>
+              <p className="text-xs text-indigo-500 mt-1">
+                Use code <span className="font-mono font-semibold">LAUNCH50</span> — 50% off forever
+              </p>
+            </div>
           )}
         </div>
 
