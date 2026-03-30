@@ -34,6 +34,14 @@ export async function PATCH(req: Request) {
     onboardingDismissed,
   } = await req.json();
 
+  // Only Pro/Agency users can hide the "Powered by ProposalForge" branding
+  const planUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { planTier: true },
+  });
+  const isPro = planUser?.planTier === "PRO" || planUser?.planTier === "AGENCY";
+  const resolvedHidePoweredBy = isPro ? hidePoweredBy : false;
+
   const profile = await prisma.userProfile.upsert({
     where: { userId: session.user.id },
     create: {
@@ -44,7 +52,7 @@ export async function PATCH(req: Request) {
       logoUrl,
       defaultCurrency: defaultCurrency ?? "USD",
       emailNotifications: emailNotifications ?? true,
-      hidePoweredBy: hidePoweredBy ?? false,
+      hidePoweredBy: resolvedHidePoweredBy ?? false,
       onboardingDismissed: onboardingDismissed ?? false,
     },
     update: {
@@ -54,7 +62,7 @@ export async function PATCH(req: Request) {
       ...(logoUrl !== undefined && { logoUrl }),
       ...(defaultCurrency !== undefined && { defaultCurrency }),
       ...(emailNotifications !== undefined && { emailNotifications }),
-      ...(hidePoweredBy !== undefined && { hidePoweredBy }),
+      ...(hidePoweredBy !== undefined && { hidePoweredBy: resolvedHidePoweredBy }),
       ...(onboardingDismissed !== undefined && { onboardingDismissed }),
     },
   });

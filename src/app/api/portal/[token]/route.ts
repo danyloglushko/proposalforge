@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, proposalViewedEmail, APP_URL } from "@/lib/email";
 
@@ -55,28 +56,34 @@ export async function GET(
   const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
   const isFirstView = !proposal.viewedAt;
 
-  // Always increment view count and track timestamp
-  const updateData: Record<string, unknown> = {
-    viewCount: { increment: 1 },
-    lastViewedAt: new Date(),
-  };
-  if (isFirstView) {
-    updateData.viewedAt = new Date();
-    updateData.status = "VIEWED";
+  // Deduplicate views: only count once per browser session (24h cookie)
+  const cookieStore = await cookies();
+  const viewCookieKey = `viewed_${proposal.id}`;
+  const alreadyCountedThisSession = cookieStore.has(viewCookieKey);
+
+  if (!alreadyCountedThisSession) {
+    const updateData: Record<string, unknown> = {
+      viewCount: { increment: 1 },
+      lastViewedAt: new Date(),
+    };
+    if (isFirstView) {
+      updateData.viewedAt = new Date();
+      updateData.status = "VIEWED";
+    }
+
+    await prisma.$transaction([
+      prisma.proposal.update({
+        where: { publicToken: token },
+        data: updateData,
+      }),
+      prisma.proposalView.create({
+        data: { proposalId: proposal.id },
+      }),
+    ]);
   }
 
-  await prisma.$transaction([
-    prisma.proposal.update({
-      where: { publicToken: token },
-      data: updateData,
-    }),
-    prisma.proposalView.create({
-      data: { proposalId: proposal.id },
-    }),
-  ]);
-
-  // Send view email notification
-  if (emailNotifications && proposal.user?.email) {
+  // Send view email notification (only on counted views)
+  if (!alreadyCountedThisSession && emailNotifications && proposal.user?.email) {
     // Free tier: only first view; Pro tier: every view
     const shouldNotify = isPro || isFirstView;
     if (shouldNotify) {
@@ -90,7 +97,7 @@ export async function GET(
   }
 
   // Send expiring soon reminder on first view if within 2 days of validUntil
-  if (isFirstView && proposal.validUntil && proposal.status !== "ACCEPTED" && proposal.status !== "PAID") {
+  if (!alreadyCountedThisSession && isFirstView && proposal.validUntil && proposal.status !== "ACCEPTED" && proposal.status !== "PAID") {
     const msUntilExpiry = new Date(proposal.validUntil).getTime() - Date.now();
     const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
     if (msUntilExpiry > 0 && msUntilExpiry <= twoDaysMs) {
@@ -113,8 +120,7 @@ export async function GET(
     hidePoweredBy: isPro && (proposal.user?.profile?.hidePoweredBy ?? false),
   };
 
-  // Return only public-safe fields
-  return NextResponse.json({
+  const response = NextResponse.json({
     id: proposal.id,
     title: proposal.title,
     clientName: proposal.clientName,
@@ -128,4 +134,16 @@ export async function GET(
     payment: proposal.payment,
     branding,
   });
+
+  // Set view-dedup cookie so refreshes don't re-count
+  if (!alreadyCountedThisSession) {
+    response.cookies.set(viewCookieKey, "1", {
+      maxAge: 60 * 60 * 24, // 24 hours
+      httpOnly: true,
+      sameSite: "lax",
+      path: `/p/${token}`,
+    });
+  }
+
+  return response;
 }

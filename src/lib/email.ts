@@ -77,7 +77,6 @@ export function proposalSignedEmail({
   signerName,
   dashboardUrl,
 }: {
-  to?: string;
   proposalTitle: string;
   signerName: string;
   dashboardUrl: string;
@@ -101,7 +100,6 @@ export function paymentReceivedEmail({
   currency,
   dashboardUrl,
 }: {
-  to?: string;
   proposalTitle: string;
   amount: number;
   currency: string;

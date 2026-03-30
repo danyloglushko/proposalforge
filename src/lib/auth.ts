@@ -104,7 +104,7 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async createUser({ user }) {
-      // Provision Stripe customer and create demo proposal on first sign-up
+      // Provision Stripe customer, create UserProfile, and create demo proposal on first sign-up
       await Promise.all([
         user.email
           ? createStripeCustomer(user.email, user.name ?? undefined).then((customer) =>
@@ -114,6 +114,9 @@ export const authOptions: NextAuthOptions = {
               })
             )
           : Promise.resolve(),
+        prisma.userProfile.create({
+          data: { userId: user.id },
+        }),
         prisma.proposal.create({
           data: {
             userId: user.id,
