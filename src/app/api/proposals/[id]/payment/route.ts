@@ -75,6 +75,7 @@ export async function POST(
     clientEmail: proposal.clientEmail ?? undefined,
     successUrl: `${appUrl}/p/${proposal.publicToken}?payment=success`,
     cancelUrl: `${appUrl}/p/${proposal.publicToken}`,
+    idempotencyKey: `${id}-payment`,
   });
 
   // Create or update the payment record

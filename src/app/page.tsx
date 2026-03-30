@@ -132,13 +132,11 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t py-8 text-center text-xs text-gray-400">
         © 2025 ProposalForge ·{" "}
-        <Link href="/pricing" className="hover:underline">
-          Pricing
-        </Link>{" "}
-        ·{" "}
-        <Link href="/login" className="hover:underline">
-          Sign in
-        </Link>
+        <Link href="/pricing" className="hover:underline">Pricing</Link>{" "}·{" "}
+        <Link href="/terms" className="hover:underline">Terms</Link>{" "}·{" "}
+        <Link href="/privacy" className="hover:underline">Privacy</Link>{" "}·{" "}
+        <Link href="/contact" className="hover:underline">Contact</Link>{" "}·{" "}
+        <Link href="/login" className="hover:underline">Sign in</Link>
       </footer>
     </div>
   );

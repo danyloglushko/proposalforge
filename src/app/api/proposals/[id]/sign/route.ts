@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendEmail, proposalSignedEmail, APP_URL } from "@/lib/email";
 
 // Public endpoint — no auth required (client portal)
 export async function POST(
@@ -19,7 +20,7 @@ export async function POST(
   // Verify public token matches
   const proposal = await prisma.proposal.findFirst({
     where: { id, publicToken },
-    include: { signature: true },
+    include: { signature: true, user: { select: { email: true } } },
   });
 
   if (!proposal) {
@@ -57,6 +58,24 @@ export async function POST(
       data: { status: "ACCEPTED", acceptedAt: new Date() },
     }),
   ]);
+
+  // Send signed notification to freelancer
+  if (proposal.user?.email) {
+    const emailData = proposalSignedEmail({
+      to: proposal.user.email,
+      proposalTitle: proposal.title,
+      signerName,
+      dashboardUrl: `${APP_URL}/dashboard/proposals/${id}`,
+    });
+    await sendEmail({ to: proposal.user.email, ...emailData });
+  }
+
+  // Send confirmation to signer
+  await sendEmail({
+    to: signerEmail,
+    subject: `You accepted: ${proposal.title}`,
+    html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;color:#111"><h1 style="font-size:22px">Proposal accepted</h1><p>Hi ${signerName},</p><p>You have successfully accepted the proposal <strong>${proposal.title}</strong>. A copy of this agreement has been recorded.</p><hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="color:#aaa;font-size:12px">ProposalForge</p></div>`,
+  });
 
   return NextResponse.json(signature, { status: 201 });
 }

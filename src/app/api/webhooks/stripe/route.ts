@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { stripe, getPlanByPriceId } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { PaymentStatus } from "@prisma/client";
+import { sendEmail, paymentReceivedEmail, APP_URL } from "@/lib/email";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -180,8 +181,24 @@ async function handleProposalPaymentCompleted(
     },
   });
 
-  await prisma.proposal.update({
+  const proposal = await prisma.proposal.update({
     where: { id: proposalId },
     data: { status: "PAID" },
+    include: {
+      user: { select: { email: true } },
+      payment: { select: { amount: true, currency: true } },
+    },
   });
+
+  // Notify freelancer
+  if (proposal.user?.email && proposal.payment) {
+    const emailData = paymentReceivedEmail({
+      to: proposal.user.email,
+      proposalTitle: proposal.title,
+      amount: proposal.payment.amount,
+      currency: proposal.payment.currency,
+      dashboardUrl: `${APP_URL}/dashboard/proposals/${proposalId}`,
+    });
+    await sendEmail({ to: proposal.user.email, ...emailData });
+  }
 }

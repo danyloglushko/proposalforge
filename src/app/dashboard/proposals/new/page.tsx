@@ -17,6 +17,39 @@ const CATEGORIES = [
   "GENERAL",
 ];
 
+const TEMPLATES: { name: string; category: string; brief: string }[] = [
+  {
+    name: "Web Development",
+    category: "DEVELOPMENT",
+    brief:
+      "Build a modern, responsive website including custom design, CMS integration, and deployment. Deliverables include homepage, inner pages, contact form, SEO setup, and 1-month post-launch support.",
+  },
+  {
+    name: "Brand Design",
+    category: "DESIGN",
+    brief:
+      "Create a complete brand identity including logo, colour palette, typography system, brand guidelines document, and social media kit. Deliverables: 3 logo concepts, 2 revision rounds, final files in all formats.",
+  },
+  {
+    name: "Marketing Campaign",
+    category: "MARKETING",
+    brief:
+      "Plan and execute a multi-channel digital marketing campaign covering paid social, email sequences, and content calendar. Includes strategy document, ad creatives, copy, reporting, and campaign optimisation over 3 months.",
+  },
+  {
+    name: "Business Consulting",
+    category: "CONSULTING",
+    brief:
+      "Conduct a business analysis engagement covering operational review, competitive landscape, growth opportunities, and a 90-day action plan. Deliverables: discovery workshop, findings report, and executive presentation.",
+  },
+  {
+    name: "Software Audit",
+    category: "DEVELOPMENT",
+    brief:
+      "Perform a comprehensive audit of an existing software system covering code quality, security vulnerabilities, performance bottlenecks, and technical debt. Deliverables: audit report with priority-ranked recommendations and remediation roadmap.",
+  },
+];
+
 export default function NewProposalPage() {
   const router = useRouter();
   const [step, setStep] = useState<"brief" | "preview">("brief");
@@ -30,6 +63,7 @@ export default function NewProposalPage() {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -214,12 +248,41 @@ export default function NewProposalPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project Brief *{" "}
-                <span className="text-gray-400 font-normal">
-                  — paste the job description or describe what&apos;s needed
-                </span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Project Brief *{" "}
+                  <span className="text-gray-400 font-normal">
+                    — paste the job description or describe what&apos;s needed
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowTemplates((v) => !v)}
+                  className="text-xs text-indigo-600 hover:underline"
+                >
+                  {showTemplates ? "Hide templates" : "Use a template"}
+                </button>
+              </div>
+              {showTemplates && (
+                <div className="mb-2 grid grid-cols-1 gap-2">
+                  {TEMPLATES.map((t) => (
+                    <button
+                      key={t.name}
+                      type="button"
+                      onClick={() => {
+                        setJobBrief(t.brief);
+                        setCategory(t.category);
+                        setShowTemplates(false);
+                      }}
+                      className="text-left px-3 py-2 border rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition text-sm"
+                    >
+                      <span className="font-medium text-gray-900">{t.name}</span>
+                      <span className="ml-2 text-xs text-gray-400">{t.category.charAt(0) + t.category.slice(1).toLowerCase()}</span>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{t.brief}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
               <textarea
                 required
                 minLength={20}

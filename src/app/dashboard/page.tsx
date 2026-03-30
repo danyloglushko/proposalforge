@@ -57,12 +57,13 @@ export default async function DashboardPage({
   ]);
 
   type StatGroup = { status: string; _count: { id: number }; _sum: { totalAmount: number | null } };
-  const stats = {
-    total: statsAgg.reduce((s: number, g: StatGroup) => s + g._count.id, 0),
-    sent: statsAgg.filter((g: StatGroup) => g.status !== "DRAFT").reduce((s: number, g: StatGroup) => s + g._count.id, 0),
-    accepted: statsAgg.filter((g: StatGroup) => ["ACCEPTED", "PAID"].includes(g.status)).reduce((s: number, g: StatGroup) => s + g._count.id, 0),
-    revenue: statsAgg.filter((g: StatGroup) => g.status === "PAID").reduce((s: number, g: StatGroup) => s + (g._sum.totalAmount ?? 0), 0),
-  };
+  const sent = statsAgg.filter((g: StatGroup) => g.status !== "DRAFT").reduce((s: number, g: StatGroup) => s + g._count.id, 0);
+  const accepted = statsAgg.filter((g: StatGroup) => ["ACCEPTED", "PAID"].includes(g.status)).reduce((s: number, g: StatGroup) => s + g._count.id, 0);
+  const collected = statsAgg.filter((g: StatGroup) => g.status === "PAID").reduce((s: number, g: StatGroup) => s + (g._sum.totalAmount ?? 0), 0);
+  const pending = statsAgg.filter((g: StatGroup) => ["SENT", "VIEWED"].includes(g.status)).reduce((s: number, g: StatGroup) => s + (g._sum.totalAmount ?? 0), 0);
+  const acceptanceRate = sent > 0 ? Math.round((accepted / sent) * 100) : 0;
+
+  const stats = { sent, accepted, collected, pending, acceptanceRate };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,6 +73,12 @@ export default async function DashboardPage({
           ProposalForge
         </Link>
         <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard/settings"
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Settings
+          </Link>
           <span className="text-sm text-gray-500">
             {session.user.name ?? session.user.email}
           </span>
@@ -92,18 +99,26 @@ export default async function DashboardPage({
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
-            { label: "Total proposals", value: stats.total },
             { label: "Sent", value: stats.sent },
             { label: "Accepted", value: stats.accepted },
+            { label: "Acceptance Rate", value: `${stats.acceptanceRate}%` },
             {
-              label: "Revenue collected",
+              label: "Collected",
               value: new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD",
                 maximumFractionDigits: 0,
-              }).format(stats.revenue),
+              }).format(stats.collected),
+            },
+            {
+              label: "Pending",
+              value: new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD",
+                maximumFractionDigits: 0,
+              }).format(stats.pending),
             },
           ].map((stat) => (
             <div

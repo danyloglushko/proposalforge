@@ -162,6 +162,7 @@ export async function createProposalPaymentSession({
   successUrl,
   cancelUrl,
   metadata,
+  idempotencyKey,
 }: {
   proposalId: string;
   amount: number; // in cents
@@ -171,6 +172,7 @@ export async function createProposalPaymentSession({
   successUrl: string;
   cancelUrl: string;
   metadata?: Record<string, string>;
+  idempotencyKey?: string;
 }) {
   return stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -194,5 +196,8 @@ export async function createProposalPaymentSession({
       proposalId,
       ...metadata,
     },
-  });
+    payment_intent_data: idempotencyKey
+      ? { metadata: { idempotencyKey } }
+      : undefined,
+  }, idempotencyKey ? { idempotencyKey } : undefined);
 }

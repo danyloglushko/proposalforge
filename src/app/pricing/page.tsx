@@ -9,12 +9,19 @@ const PLANS = [
     tier: "FREE",
     name: "Free",
     price: 0,
-    tagline: "Try it out",
+    tagline: "Try it out — no card required",
     features: [
       "3 proposals/month",
-      "AI generation",
-      "Client portal",
-      "E-signature",
+      "AI proposal generation",
+      "Shareable client portal",
+      "E-signature collection",
+      "1 user",
+    ],
+    notIncluded: [
+      "Email notifications",
+      "PDF/DOCX export",
+      "Custom branding",
+      "Payment requests",
     ],
     cta: "Get started",
     highlighted: false,
@@ -26,11 +33,14 @@ const PLANS = [
     tagline: "For active freelancers",
     features: [
       "Unlimited proposals",
-      "AI generation",
-      "Client portal",
-      "E-signature",
+      "AI proposal generation",
+      "Shareable client portal",
+      "E-signature collection",
+      "Email notifications",
+      "PDF & DOCX export",
       "1 user",
     ],
+    notIncluded: [],
     cta: "Start Solo",
     highlighted: false,
   },
@@ -41,10 +51,16 @@ const PLANS = [
     tagline: "For serious earners",
     features: [
       "Everything in Solo",
+      "Unlimited proposals",
+      "Email notifications",
+      "PDF & DOCX export",
+      "Custom portal branding",
       "Stripe payment requests",
-      "Portal branding",
-      "Analytics",
+      "Analytics dashboard",
+      "Priority support",
+      "1 user",
     ],
+    notIncluded: [],
     cta: "Start Pro",
     highlighted: true,
   },
@@ -57,10 +73,39 @@ const PLANS = [
       "Everything in Pro",
       "5 seats",
       "White-label portal",
+      "Team analytics",
       "Priority support",
     ],
+    notIncluded: [],
     cta: "Start Agency",
     highlighted: false,
+  },
+];
+
+const FAQ = [
+  {
+    q: "Is my data secure?",
+    a: "Yes. All data is encrypted in transit (HTTPS) and at rest. We use industry-standard security practices. Payment data is handled entirely by Stripe — we never store your card details.",
+  },
+  {
+    q: "Can I use my own branding on the client portal?",
+    a: "Custom branding (your logo and colors on the client portal) is available on the Pro and Agency plans. Free and Solo plans use the default ProposalForge branding.",
+  },
+  {
+    q: "What payment methods do you accept?",
+    a: "We accept all major credit and debit cards (Visa, Mastercard, American Express) via Stripe. Annual plans are charged upfront at checkout.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "Yes. You can cancel your subscription at any time from your account settings. Your plan stays active until the end of the current billing period. We don't issue refunds for partial periods.",
+  },
+  {
+    q: "Does my client need an account to view or sign a proposal?",
+    a: "No. Clients receive a unique link and can view, sign, and pay directly from their browser with no account required.",
+  },
+  {
+    q: "What happens when I hit my 3 proposal limit on the free plan?",
+    a: "You can still view and share existing proposals. To create new ones, you'll need to upgrade to a paid plan or wait until your monthly limit resets at the start of the next calendar month.",
   },
 ];
 
@@ -69,6 +114,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   async function handleUpgrade(tier: string) {
     if (tier === "FREE") return;
@@ -178,6 +224,12 @@ export default function PricingPage() {
                     {f}
                   </li>
                 ))}
+                {plan.notIncluded.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-400">
+                    <span className="mt-0.5">–</span>
+                    {f}
+                  </li>
+                ))}
               </ul>
               <button
                 onClick={() => handleUpgrade(plan.tier)}
@@ -206,7 +258,40 @@ export default function PricingPage() {
           All plans include SSL, uptime SLA, and standard support.
           Cancel anytime. Annual plans save 2 months.
         </p>
+
+        {/* FAQ */}
+        <div className="max-w-2xl mx-auto text-left pt-8">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+            Frequently asked questions
+          </h2>
+          <div className="space-y-3">
+            {FAQ.map((item, i) => (
+              <div key={i} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                >
+                  <span className="text-sm font-medium text-gray-900">{item.q}</span>
+                  <span className={`text-gray-400 transition-transform text-lg leading-none ${openFaq === i ? "rotate-45" : ""}`}>+</span>
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      <footer className="border-t py-8 text-center text-xs text-gray-400">
+        © 2025 ProposalForge ·{" "}
+        <Link href="/terms" className="hover:underline">Terms</Link>{" "}·{" "}
+        <Link href="/privacy" className="hover:underline">Privacy</Link>{" "}·{" "}
+        <Link href="/contact" className="hover:underline">Contact</Link>{" "}·{" "}
+        <Link href="/pricing" className="hover:underline">Pricing</Link>
+      </footer>
     </div>
   );
 }
