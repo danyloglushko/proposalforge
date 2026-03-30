@@ -10,10 +10,6 @@ import {
   AlignmentType,
   BorderStyle,
   Packer,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
 } from "docx";
 
 /** Convert simple Markdown to docx Paragraph array (best-effort). */
