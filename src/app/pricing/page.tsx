@@ -4,6 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
+const NEW_PRO_FEATURES = [
+  { icon: "📧", text: "Email alerts when clients view, sign & pay" },
+  { icon: "📊", text: "Proposal analytics — see who viewed and when" },
+  { icon: "🎨", text: "Custom logo on client portal" },
+  { icon: "✨", text: "Remove ProposalForge branding" },
+];
+
 const PLANS = [
   {
     tier: "FREE",
@@ -42,8 +49,11 @@ const PLANS = [
     features: [
       "Everything in Solo",
       "Stripe payment requests",
-      "Portal branding",
-      "Analytics",
+      { text: "Email alerts when clients view, sign & pay", isNew: true },
+      { text: "Proposal analytics — see who viewed and when", isNew: true },
+      { text: "Custom logo on client portal", isNew: true },
+      { text: "Remove ProposalForge branding", isNew: true },
+      "Priority support",
     ],
     cta: "Start Pro",
     highlighted: true,
@@ -57,12 +67,14 @@ const PLANS = [
       "Everything in Pro",
       "5 seats",
       "White-label portal",
-      "Priority support",
+      "Dedicated support",
     ],
     cta: "Start Agency",
     highlighted: false,
   },
 ];
+
+type Feature = string | { text: string; isNew: boolean };
 
 export default function PricingPage() {
   const { data: session } = useSession();
@@ -138,6 +150,24 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* New Pro features callout */}
+        <div className="bg-indigo-600 rounded-2xl p-6 text-left">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="bg-white text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              New in Pro
+            </span>
+            <p className="text-indigo-100 text-sm">Just launched — 4 powerful features now included</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {NEW_PRO_FEATURES.map((f) => (
+              <div key={f.text} className="bg-white/10 rounded-xl p-4 space-y-2">
+                <span className="text-2xl">{f.icon}</span>
+                <p className="text-white text-sm font-medium leading-snug">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 max-w-md mx-auto">
             {error}
@@ -150,7 +180,7 @@ export default function PricingPage() {
               key={plan.tier}
               className={`rounded-2xl border p-6 space-y-5 ${
                 plan.highlighted
-                  ? "border-indigo-500 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500"
+                  ? "border-indigo-500 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500 bg-indigo-50/30"
                   : "border-gray-200 bg-white"
               }`}
             >
@@ -172,12 +202,22 @@ export default function PricingPage() {
                 )}
               </div>
               <ul className="space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    {f}
-                  </li>
-                ))}
+                {(plan.features as Feature[]).map((f) => {
+                  const isObj = typeof f === "object";
+                  const text = isObj ? f.text : f;
+                  const isNew = isObj && f.isNew;
+                  return (
+                    <li key={text} className="flex items-start gap-2 text-sm text-gray-600">
+                      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                      <span className="flex-1">{text}</span>
+                      {isNew && (
+                        <span className="shrink-0 bg-indigo-100 text-indigo-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                          New
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <button
                 onClick={() => handleUpgrade(plan.tier)}

@@ -102,6 +102,7 @@ model Proposal {
   currency    String         @default("USD")
   validUntil  DateTime?
   publicToken String         @unique @default(cuid())
+  viewCount   Int            @default(0)
   viewedAt    DateTime?
   acceptedAt  DateTime?
   declinedAt  DateTime?

@@ -33,10 +33,14 @@ export async function GET(
     return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
   }
 
-  // Record view
-  await prisma.proposal.updateMany({
-    where: { publicToken: token, viewedAt: null },
-    data: { viewedAt: new Date(), status: "VIEWED" },
+  // Record view — increment count always, set viewedAt + status on first view
+  await prisma.proposal.update({
+    where: { publicToken: token },
+    data: {
+      viewCount: { increment: 1 },
+      viewedAt: proposal.status === "DRAFT" || proposal.status === "SENT" ? new Date() : undefined,
+      status: proposal.status === "DRAFT" || proposal.status === "SENT" ? "VIEWED" : undefined,
+    },
   });
 
   return NextResponse.json(proposal);

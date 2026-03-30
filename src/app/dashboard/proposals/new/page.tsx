@@ -15,6 +15,10 @@ const CATEGORIES = [
   "GENERAL",
 ];
 
+function wordCount(text: string) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+
 export default function NewProposalPage() {
   const router = useRouter();
   const [step, setStep] = useState<"brief" | "edit">("brief");
@@ -28,6 +32,7 @@ export default function NewProposalPage() {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedProposalToken, setSavedProposalToken] = useState<string | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleGenerate(e: React.FormEvent) {
@@ -113,11 +118,15 @@ export default function NewProposalPage() {
       }
 
       const proposal = await res.json();
+      setSavedProposalToken(proposal.publicToken);
       router.push(`/dashboard/proposals/${proposal.id}`);
     } finally {
       setSaving(false);
     }
   }
+
+  const editorWords = wordCount(content);
+  const editorChars = content.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -161,103 +170,116 @@ export default function NewProposalPage() {
 
         {/* Step 1: Brief */}
         {step === "brief" && (
-          <form onSubmit={handleGenerate} className="bg-white rounded-xl border shadow-sm p-8 space-y-5">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Create a Proposal
-            </h1>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Proposal Title *
-                </label>
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. E-commerce Website Build"
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Service Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0) + c.slice(1).toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Name *
-                </label>
-                <input
-                  required
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Acme Inc."
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Email
-                </label>
-                <input
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="client@acme.com"
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleGenerate} className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project Brief *{" "}
-                <span className="text-gray-400 font-normal">
-                  — paste the job description or describe what&apos;s needed
-                </span>
-              </label>
-              <textarea
-                required
-                minLength={20}
-                rows={6}
-                value={jobBrief}
-                onChange={(e) => setJobBrief(e.target.value)}
-                placeholder="e.g. We need a full-stack developer to build a customer portal for our SaaS app. The portal should allow users to view invoices, manage subscriptions, and submit support tickets. We use React on the frontend and Node.js on the backend..."
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                {jobBrief.length} chars — more detail = better proposal
-              </p>
+              <h1 className="text-xl font-semibold text-gray-900">Create a Proposal</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Fill in the details below and AI will write your proposal.</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project Value (USD)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                placeholder="5000"
-                className="w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Proposal Details</legend>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Proposal Title *
+                  </label>
+                  <input
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. E-commerce Website Build"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Service Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c.charAt(0) + c.slice(1).toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Client Info</legend>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Name *
+                  </label>
+                  <input
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Acme Inc."
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Email
+                  </label>
+                  <input
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="client@acme.com"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Project Brief</legend>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Job Description *{" "}
+                  <span className="text-gray-400 font-normal">
+                    — paste the job post or describe what&apos;s needed
+                  </span>
+                </label>
+                <textarea
+                  required
+                  minLength={20}
+                  rows={6}
+                  value={jobBrief}
+                  onChange={(e) => setJobBrief(e.target.value)}
+                  placeholder="e.g. We need a full-stack developer to build a customer portal for our SaaS app. The portal should allow users to view invoices, manage subscriptions, and submit support tickets. We use React on the frontend and Node.js on the backend..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {wordCount(jobBrief)} words · {jobBrief.length} chars
+                  </p>
+                  <p className="text-xs text-gray-400">More detail = better proposal</p>
+                </div>
+              </div>
+
+              <div className="pt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Project Value (USD)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                  placeholder="5000"
+                  className="w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </fieldset>
 
             <button
               type="submit"
@@ -271,26 +293,49 @@ export default function NewProposalPage() {
         {/* Step 2: Edit generated content */}
         {step === "edit" && (
           <div className="space-y-4">
-            <div className="bg-white rounded-xl border shadow-sm p-8 space-y-4">
-              <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Edit Proposal
-                </h1>
-                {generating && (
-                  <span className="text-sm text-indigo-600 animate-pulse">
-                    AI is writing...
-                  </span>
-                )}
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              {/* Editor toolbar */}
+              <div className="border-b px-6 py-3 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-base font-semibold text-gray-900">Proposal Content</h1>
+                  {generating && (
+                    <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full animate-pulse">
+                      AI writing…
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">{editorWords} words · {editorChars} chars</span>
+                  {savedProposalToken ? (
+                    <a
+                      href={`/p/${savedProposalToken}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                    >
+                      Preview ↗
+                    </a>
+                  ) : (
+                    <span
+                      title="Save the proposal to preview the client view"
+                      className="text-xs border border-gray-200 text-gray-400 px-3 py-1.5 rounded-lg cursor-not-allowed select-none"
+                    >
+                      Preview ↗
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <textarea
-                ref={contentRef}
-                rows={24}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full border rounded-lg px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                placeholder="Generating your proposal..."
-              />
+              <div className="p-6">
+                <textarea
+                  ref={contentRef}
+                  rows={24}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="Generating your proposal…"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -305,7 +350,7 @@ export default function NewProposalPage() {
                 disabled={saving || generating}
                 className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
               >
-                {saving ? "Saving..." : "Save Proposal"}
+                {saving ? "Saving…" : "Save Proposal"}
               </button>
             </div>
           </div>

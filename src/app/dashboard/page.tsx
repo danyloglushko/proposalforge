@@ -50,6 +50,7 @@ export default async function DashboardPage({
         createdAt: true,
         updatedAt: true,
         publicToken: true,
+        viewCount: true,
       },
     }),
     prisma.proposal.groupBy({
@@ -183,6 +184,7 @@ export default async function DashboardPage({
                   <th className="px-6 py-3 text-left">Proposal</th>
                   <th className="px-6 py-3 text-left">Client</th>
                   <th className="px-6 py-3 text-left">Status</th>
+                  <th className="px-6 py-3 text-left">Views</th>
                   <th className="px-6 py-3 text-right">Amount</th>
                   <th className="px-6 py-3 text-left">Updated</th>
                   <th className="px-6 py-3" />
@@ -208,6 +210,15 @@ export default async function DashboardPage({
                       >
                         {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {p.viewCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">
+                          👁 {p.viewCount}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-700">
                       {p.totalAmount

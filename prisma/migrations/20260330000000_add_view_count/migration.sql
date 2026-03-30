@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Proposal" ADD COLUMN "viewCount" INTEGER NOT NULL DEFAULT 0;
