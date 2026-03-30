@@ -116,7 +116,7 @@ model Proposal {
   clientName  String
   clientEmail String?
   jobBrief    String         @db.Text
-  content     Json
+  content     String         @db.Text
   status      ProposalStatus @default(DRAFT)
   totalAmount Float?
   currency    String         @default("USD")
@@ -124,7 +124,6 @@ model Proposal {
   publicToken String         @unique @default(cuid())
   viewCount   Int            @default(0)
   lastViewedAt DateTime?
-  sentAt      DateTime?
   viewedAt    DateTime?
   acceptedAt  DateTime?
   declinedAt  DateTime?

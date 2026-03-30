@@ -1,22 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import ProposalDocument from "@/components/ProposalDocument";
-import type { ProposalStructure } from "@/types/proposal";
+import ReactMarkdown from "react-markdown";
 
 interface Proposal {
   id: string;
   title: string;
   clientName: string;
   clientEmail: string | null;
-  content: ProposalStructure;
+  content: string;
   status: string;
   totalAmount: number | null;
   currency: string;
   publicToken: string;
-  sentAt: string | null;
   createdAt: string;
   updatedAt: string;
   signature: { signerName: string; signerEmail: string; signedAt: string } | null;
@@ -34,18 +32,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function ProposalDetailPage() {
   const { id } = useParams() as { id: string };
-  const router = useRouter();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [requestingPayment, setRequestingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [duplicating, setDuplicating] = useState(false);
-  const [showSendModal, setShowSendModal] = useState(false);
-  const [sendEmail, setSendEmail] = useState("");
-  const [sendMessage, setSendMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/proposals/${id}`)
@@ -70,38 +61,6 @@ export default function ProposalDetailPage() {
     await navigator.clipboard.writeText(url);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
-  }
-
-  async function handleDuplicate() {
-    setDuplicating(true);
-    const res = await fetch(`/api/proposals/${id}/duplicate`, { method: "POST" });
-    const data = await res.json();
-    if (res.ok) {
-      router.push(`/dashboard/proposals/${data.id}`);
-    }
-    setDuplicating(false);
-  }
-
-  async function handleSendToClient(e: React.FormEvent) {
-    e.preventDefault();
-    if (!proposal) return;
-    setSending(true);
-    setSendError(null);
-    const res = await fetch(`/api/proposals/${id}/send`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: sendEmail, message: sendMessage }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setProposal((p) => p ? { ...p, status: data.status, sentAt: new Date().toISOString(), clientEmail: sendEmail } : p);
-      setShowSendModal(false);
-      setSendEmail("");
-      setSendMessage("");
-    } else {
-      setSendError(data.error ?? "Failed to send");
-    }
-    setSending(false);
   }
 
   async function handleRequestPayment(type: "DEPOSIT" | "FULL") {
@@ -141,60 +100,6 @@ export default function ProposalDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Send to Client Modal */}
-      {showSendModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Send to Client</h2>
-            <form onSubmit={handleSendToClient} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={sendEmail}
-                  onChange={(e) => setSendEmail(e.target.value)}
-                  placeholder="client@company.com"
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Personal Message (optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={sendMessage}
-                  onChange={(e) => setSendMessage(e.target.value)}
-                  placeholder="Hi, please review the attached proposal..."
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                />
-              </div>
-              {sendError && (
-                <p className="text-sm text-red-600">{sendError}</p>
-              )}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowSendModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={sending}
-                  className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
-                >
-                  {sending ? "Sending…" : "Send Proposal"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       <nav className="bg-white border-b px-6 py-4 flex items-center gap-4">
         <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
           ProposalForge
@@ -228,21 +133,10 @@ export default function ProposalDetailPage() {
 
         {/* Action bar */}
         <div className="flex flex-wrap gap-3">
-          {(proposal.status === "DRAFT" || proposal.status === "SENT") && (
-            <button
-              onClick={() => {
-                setSendEmail(proposal.clientEmail ?? "");
-                setShowSendModal(true);
-              }}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
-            >
-              {proposal.sentAt ? "Resend to Client" : "Send to Client"}
-            </button>
-          )}
           {proposal.status === "DRAFT" && (
             <button
               onClick={handleMarkSent}
-              className="border border-indigo-300 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 transition"
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
             >
               Mark as Sent
             </button>
@@ -263,17 +157,11 @@ export default function ProposalDetailPage() {
           </a>
           <a
             href={`/api/proposals/${id}/export`}
+            download
             className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
           >
-            Download DOCX
+            Download .docx
           </a>
-          <button
-            onClick={handleDuplicate}
-            disabled={duplicating}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition"
-          >
-            {duplicating ? "Duplicating…" : "Duplicate"}
-          </button>
           {["ACCEPTED"].includes(proposal.status) && !proposal.payment && (
             <>
               <button
@@ -295,20 +183,30 @@ export default function ProposalDetailPage() {
         </div>
 
         {paymentError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            {paymentError}
-            {paymentError.includes("Pro") && (
-              <Link href="/pricing" className="ml-2 underline font-medium">
-                Upgrade plan →
-              </Link>
-            )}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex items-start justify-between gap-2">
+            <span>
+              {paymentError}
+              {paymentError.includes("Pro") && (
+                <Link href="/pricing" className="ml-2 underline font-medium">
+                  Upgrade plan →
+                </Link>
+              )}
+            </span>
+            <button
+              onClick={() => setPaymentError(null)}
+              className="text-red-400 hover:text-red-600 font-bold text-lg leading-none shrink-0"
+            >
+              &times;
+            </button>
           </div>
         )}
 
         <div className="grid grid-cols-3 gap-4">
           {/* Proposal content */}
           <div className="col-span-2 bg-white rounded-xl border shadow-sm p-8">
-            <ProposalDocument proposal={proposal.content} />
+            <div className="prose prose-gray prose-sm max-w-none">
+              <ReactMarkdown>{proposal.content}</ReactMarkdown>
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -332,12 +230,6 @@ export default function ProposalDetailPage() {
                   <p className="text-xs text-gray-400 uppercase tracking-wide">Created</p>
                   <p>{new Date(proposal.createdAt).toLocaleDateString()}</p>
                 </div>
-                {proposal.sentAt && (
-                  <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">Sent</p>
-                    <p>{new Date(proposal.sentAt).toLocaleDateString()}</p>
-                  </div>
-                )}
               </div>
             </div>
 

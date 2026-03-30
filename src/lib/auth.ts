@@ -5,38 +5,69 @@ import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import { createStripeCustomer } from "@/lib/stripe";
 
-const DEMO_PROPOSAL_CONTENT = {
-  title: "Website Redesign for Acme Corp",
-  clientName: "Acme Corp",
-  freelancerName: "Your Name",
-  date: new Date().toISOString().split("T")[0],
-  executiveSummary:
-    "This is a sample proposal auto-created to show you how ProposalForge works. Edit or delete it when you're ready to create your own.",
-  problem:
-    "Acme Corp's current website is outdated, lacks mobile responsiveness, and isn't converting visitors into customers.",
-  solution:
-    "A modern, mobile-first redesign with clear calls-to-action, improved user experience, and performance optimization.",
-  scopeOfWork: [
-    { deliverable: "Discovery & Strategy", description: "Stakeholder interviews, competitor research, and wireframes" },
-    { deliverable: "UI/UX Design", description: "Full responsive design in Figma with two revision rounds" },
-    { deliverable: "Development", description: "Next.js frontend with headless CMS integration and QA testing" },
-  ],
-  timeline: [
-    { phase: "Discovery", duration: "1 week", description: "Kickoff, research, and wireframes" },
-    { phase: "Design", duration: "2 weeks", description: "UI design and client review rounds" },
-    { phase: "Development", duration: "3 weeks", description: "Build, integrations, and QA" },
-  ],
-  pricing: [
-    { item: "Discovery & Strategy", qty: 1, rate: 1500, total: 1500 },
-    { item: "UI/UX Design", qty: 1, rate: 3000, total: 3000 },
-    { item: "Development", qty: 1, rate: 5500, total: 5500 },
-  ],
-  currency: "USD",
-  terms:
-    "50% deposit due upfront, 50% on project completion. All work remains property of the client upon final payment. Scope changes will be quoted separately.",
-  nextSteps:
-    "Review this sample proposal to see how your clients will experience yours. When ready, delete it and create your first real proposal!",
-};
+const DEMO_PROPOSAL_CONTENT = `# Website Redesign for Acme Corp
+
+**Prepared for:** Acme Corp
+**Date:** ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+
+> This is a sample proposal auto-created to show you how ProposalForge works. Edit or delete it when you're ready to create your own.
+
+---
+
+## Executive Summary
+
+Acme Corp's current website is outdated, lacks mobile responsiveness, and isn't converting visitors into customers. This proposal outlines a modern, mobile-first redesign with clear calls-to-action, improved user experience, and performance optimization.
+
+## The Problem
+
+Acme Corp's current website is holding the business back:
+- Not mobile-responsive (60%+ of traffic is mobile)
+- Slow page load times hurt SEO rankings
+- Unclear messaging and calls-to-action
+- Outdated design reduces credibility with prospects
+
+## Our Solution
+
+A full website redesign using modern technologies and design principles:
+- Mobile-first, responsive design across all devices
+- Performance optimization for fast load times
+- Clear messaging hierarchy and compelling CTAs
+- Modern visual identity aligned with your brand
+
+## Scope of Work
+
+| Deliverable | Description |
+|---|---|
+| Discovery & Strategy | Stakeholder interviews, competitor research, and wireframes |
+| UI/UX Design | Full responsive design in Figma with two revision rounds |
+| Development | Next.js frontend with CMS integration and QA testing |
+
+## Timeline
+
+| Phase | Duration | Details |
+|---|---|---|
+| Discovery | 1 week | Kickoff, research, and wireframes |
+| Design | 2 weeks | UI design and client review rounds |
+| Development | 3 weeks | Build, integrations, and QA |
+
+## Investment
+
+| Item | Qty | Rate | Total |
+|---|---|---|---|
+| Discovery & Strategy | 1 | $1,500 | $1,500 |
+| UI/UX Design | 1 | $3,000 | $3,000 |
+| Development | 1 | $5,500 | $5,500 |
+
+**Grand Total: $10,000 USD**
+
+## Terms
+
+50% deposit due upfront, 50% on project completion. All work remains property of the client upon final payment. Scope changes will be quoted separately.
+
+## Next Steps
+
+Review this sample proposal to see how your clients will experience yours. When ready, delete it and create your first real proposal!
+`;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
@@ -58,10 +89,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    session({ session, user }) {
+    async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
-        session.user.planTier = (user as { planTier?: string }).planTier ?? "FREE";
+        // Always fetch planTier fresh from DB so upgrades are reflected immediately
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { planTier: true },
+        });
+        session.user.planTier = dbUser?.planTier ?? "FREE";
       }
       return session;
     },

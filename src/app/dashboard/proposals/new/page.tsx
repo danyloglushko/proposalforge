@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import ProposalDocument from "@/components/ProposalDocument";
-import type { ProposalStructure } from "@/types/proposal";
 
 const CATEGORIES = [
   "DEVELOPMENT",
@@ -17,58 +15,25 @@ const CATEGORIES = [
   "GENERAL",
 ];
 
-const TEMPLATES: { name: string; category: string; brief: string; icon: string }[] = [
-  {
-    name: "Web Development",
-    category: "DEVELOPMENT",
-    icon: "💻",
-    brief:
-      "Build a modern, responsive website including custom design, CMS integration, and deployment. Deliverables include homepage, inner pages, contact form, SEO setup, and 1-month post-launch support.",
-  },
-  {
-    name: "Brand Design",
-    category: "DESIGN",
-    icon: "🎨",
-    brief:
-      "Create a complete brand identity including logo, colour palette, typography system, brand guidelines document, and social media kit. Deliverables: 3 logo concepts, 2 revision rounds, final files in all formats.",
-  },
-  {
-    name: "Marketing Campaign",
-    category: "MARKETING",
-    icon: "📣",
-    brief:
-      "Plan and execute a multi-channel digital marketing campaign covering paid social, email sequences, and content calendar. Includes strategy document, ad creatives, copy, reporting, and campaign optimisation over 3 months.",
-  },
-  {
-    name: "Business Consulting",
-    category: "CONSULTING",
-    icon: "📊",
-    brief:
-      "Conduct a business analysis engagement covering operational review, competitive landscape, growth opportunities, and a 90-day action plan. Deliverables: discovery workshop, findings report, and executive presentation.",
-  },
-  {
-    name: "Software Audit",
-    category: "DEVELOPMENT",
-    icon: "🔍",
-    brief:
-      "Perform a comprehensive audit of an existing software system covering code quality, security vulnerabilities, performance bottlenecks, and technical debt. Deliverables: audit report with priority-ranked recommendations and remediation roadmap.",
-  },
-];
+function wordCount(text: string) {
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
 
 export default function NewProposalPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"brief" | "preview">("brief");
+  const [step, setStep] = useState<"brief" | "edit">("brief");
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [jobBrief, setJobBrief] = useState("");
   const [category, setCategory] = useState("GENERAL");
   const [totalAmount, setTotalAmount] = useState("");
-  const [proposal, setProposal] = useState<ProposalStructure | null>(null);
+  const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [savedProposalToken, setSavedProposalToken] = useState<string | null>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +43,8 @@ export default function NewProposalPage() {
     }
     setError(null);
     setGenerating(true);
+    setContent("");
+    setStep("edit");
 
     try {
       const res = await fetch("/api/generate", {
@@ -86,15 +53,36 @@ export default function NewProposalPage() {
         body: JSON.stringify({ jobBrief, clientName, templateCategory: category }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        const data = await res.json();
         setError(data.error ?? "Generation failed");
+        setGenerating(false);
         return;
       }
 
-      setProposal(data.proposal as ProposalStructure);
-      setStep("preview");
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const payload = line.slice(6);
+            if (payload === "[DONE]") break;
+            try {
+              const { text } = JSON.parse(payload);
+              setContent((prev) => prev + text);
+            } catch {
+              // skip malformed
+            }
+          }
+        }
+      }
     } catch {
       setError("Failed to generate proposal. Please try again.");
     } finally {
@@ -103,7 +91,7 @@ export default function NewProposalPage() {
   }
 
   async function handleSave() {
-    if (!title || !clientName || !proposal) {
+    if (!title || !clientName || !content) {
       setError("Title, client name, and proposal content are required.");
       return;
     }
@@ -118,7 +106,7 @@ export default function NewProposalPage() {
           clientName,
           clientEmail,
           jobBrief,
-          content: proposal,
+          content,
           totalAmount: totalAmount ? parseFloat(totalAmount) : null,
         }),
       });
@@ -129,12 +117,16 @@ export default function NewProposalPage() {
         return;
       }
 
-      const saved = await res.json();
-      router.push(`/dashboard/proposals/${saved.id}`);
+      const proposal = await res.json();
+      setSavedProposalToken(proposal.publicToken);
+      router.push(`/dashboard/proposals/${proposal.id}`);
     } finally {
       setSaving(false);
     }
   }
+
+  const editorWords = wordCount(content);
+  const editorChars = content.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -148,200 +140,202 @@ export default function NewProposalPage() {
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
-            {error}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm flex items-start justify-between gap-2">
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-600 font-bold text-lg leading-none shrink-0"
+            >
+              &times;
+            </button>
           </div>
         )}
 
-        {/* Step indicator */}
+        {/* Step progress indicator */}
         <div className="flex items-center gap-2 text-sm">
-          <div
-            className={`flex items-center gap-1.5 ${
-              step === "brief" ? "text-indigo-600 font-medium" : "text-gray-400"
-            }`}
-          >
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === "preview" ? "bg-green-500 text-white" : "bg-indigo-600 text-white"
-              }`}
-            >
-              {step === "preview" ? "✓" : "1"}
-            </span>
+          <div className={`flex items-center gap-1.5 ${step === "brief" ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step === "edit" ? "bg-green-500 text-white" : "bg-indigo-600 text-white"
+            }`}>{step === "edit" ? "✓" : "1"}</span>
             Project Brief
           </div>
           <span className="text-gray-300 mx-1">—</span>
-          <div
-            className={`flex items-center gap-1.5 ${
-              step === "preview" ? "text-indigo-600 font-medium" : "text-gray-400"
-            }`}
-          >
-            <span
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                step === "preview" ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              2
-            </span>
-            Preview &amp; Save
+          <div className={`flex items-center gap-1.5 ${step === "edit" ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              step === "edit" ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"
+            }`}>2</span>
+            Review &amp; Save
           </div>
         </div>
 
         {/* Step 1: Brief */}
         {step === "brief" && (
-          <form
-            onSubmit={handleGenerate}
-            className="bg-white rounded-xl border shadow-sm p-8 space-y-5"
-          >
-            <h1 className="text-xl font-semibold text-gray-900">Create a Proposal</h1>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Proposal Title *
-                </label>
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. E-commerce Website Build"
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Service Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c.charAt(0) + c.slice(1).toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Name *
-                </label>
-                <input
-                  required
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Acme Inc."
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Email
-                </label>
-                <input
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => setClientEmail(e.target.value)}
-                  placeholder="client@acme.com"
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
+          <form onSubmit={handleGenerate} className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium text-gray-700">
-                  Project Brief *{" "}
+              <h1 className="text-xl font-semibold text-gray-900">Create a Proposal</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Fill in the details below and AI will write your proposal.</p>
+            </div>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Proposal Details</legend>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Proposal Title *
+                  </label>
+                  <input
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. E-commerce Website Build"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Service Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c.charAt(0) + c.slice(1).toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Client Info</legend>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Name *
+                  </label>
+                  <input
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Acme Inc."
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Client Email
+                  </label>
+                  <input
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    placeholder="client@acme.com"
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Project Brief</legend>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Job Description *{" "}
                   <span className="text-gray-400 font-normal">
-                    — paste the job description or describe what&apos;s needed
+                    — paste the job post or describe what&apos;s needed
                   </span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setShowTemplates((v) => !v)}
-                  className="text-xs text-indigo-600 hover:underline"
-                >
-                  {showTemplates ? "Hide templates" : "Use a template"}
-                </button>
-              </div>
-              {showTemplates && (
-                <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {TEMPLATES.map((t) => (
-                    <button
-                      key={t.name}
-                      type="button"
-                      onClick={() => {
-                        setJobBrief(t.brief);
-                        setCategory(t.category);
-                        setShowTemplates(false);
-                      }}
-                      className="text-left px-4 py-3 border rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition group"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg">{t.icon}</span>
-                        <span className="font-medium text-gray-900 text-sm group-hover:text-indigo-700">{t.name}</span>
-                        <span className="ml-auto text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">
-                          {t.category.charAt(0) + t.category.slice(1).toLowerCase()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{t.brief}</p>
-                    </button>
-                  ))}
+                <textarea
+                  required
+                  minLength={20}
+                  rows={6}
+                  value={jobBrief}
+                  onChange={(e) => setJobBrief(e.target.value)}
+                  placeholder="e.g. We need a full-stack developer to build a customer portal for our SaaS app. The portal should allow users to view invoices, manage subscriptions, and submit support tickets. We use React on the frontend and Node.js on the backend..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {wordCount(jobBrief)} words · {jobBrief.length} chars
+                  </p>
+                  <p className="text-xs text-gray-400">More detail = better proposal</p>
                 </div>
-              )}
-              <textarea
-                required
-                minLength={20}
-                rows={6}
-                value={jobBrief}
-                onChange={(e) => setJobBrief(e.target.value)}
-                placeholder="e.g. We need a full-stack developer to build a customer portal for our SaaS app..."
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                {jobBrief.length} chars — more detail = better proposal
-              </p>
-            </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project Value (USD)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                placeholder="5000"
-                className="w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+              <div className="pt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Project Value (USD)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                  placeholder="5000"
+                  className="w-48 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </fieldset>
 
             <button
               type="submit"
-              disabled={generating}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+              className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition"
             >
-              {generating ? "Generating proposal…" : "Generate Proposal with AI →"}
+              Generate Proposal with AI →
             </button>
           </form>
         )}
 
-        {/* Step 2: Preview */}
-        {step === "preview" && proposal && (
+        {/* Step 2: Edit generated content */}
+        {step === "edit" && (
           <div className="space-y-4">
-            <div className="bg-white rounded-xl border shadow-sm p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-xl font-semibold text-gray-900">Preview</h1>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                  AI-generated — review before saving
-                </span>
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              {/* Editor toolbar */}
+              <div className="border-b px-6 py-3 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-base font-semibold text-gray-900">Proposal Content</h1>
+                  {generating && (
+                    <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full animate-pulse">
+                      AI writing…
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">{editorWords} words · {editorChars} chars</span>
+                  {savedProposalToken ? (
+                    <a
+                      href={`/p/${savedProposalToken}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                    >
+                      Preview ↗
+                    </a>
+                  ) : (
+                    <span
+                      title="Save the proposal to preview the client view"
+                      className="text-xs border border-gray-200 text-gray-400 px-3 py-1.5 rounded-lg cursor-not-allowed select-none"
+                    >
+                      Preview ↗
+                    </span>
+                  )}
+                </div>
               </div>
-              <ProposalDocument proposal={proposal} />
+
+              <div className="p-6">
+                <textarea
+                  ref={contentRef}
+                  rows={24}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full border rounded-lg px-4 py-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="Generating your proposal…"
+                />
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -349,11 +343,11 @@ export default function NewProposalPage() {
                 onClick={() => setStep("brief")}
                 className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
               >
-                ← Regenerate
+                ← Back
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || generating}
                 className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
               >
                 {saving ? "Saving…" : "Save Proposal"}

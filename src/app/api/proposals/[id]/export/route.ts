@@ -1,66 +1,76 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  Table,
-  TableRow,
-  TableCell,
-  HeadingLevel,
-  AlignmentType,
-  ShadingType,
-  WidthType,
-  BorderStyle,
-  convertInchesToTwip,
-} from "docx";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { ProposalStructure } from "@/types/proposal";
+import {
+  Document,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  BorderStyle,
+  Packer,
+} from "docx";
 
-const INDIGO = "3730A3"; // indigo-700
+/** Convert simple Markdown to docx Paragraph array (best-effort). */
+function markdownToDocx(content: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const lines = content.split("\n");
 
-function heading(text: string) {
-  return new Paragraph({
-    text,
-    heading: HeadingLevel.HEADING_1,
-    spacing: { before: 280, after: 120 },
-  });
-}
+  for (const line of lines) {
+    // Headings
+    if (line.startsWith("### ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(4), heading: HeadingLevel.HEADING_3 })
+      );
+    } else if (line.startsWith("## ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(3), heading: HeadingLevel.HEADING_2 })
+      );
+    } else if (line.startsWith("# ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(2), heading: HeadingLevel.HEADING_1 })
+      );
+    }
+    // Bullet list
+    else if (line.startsWith("- ") || line.startsWith("* ")) {
+      paragraphs.push(
+        new Paragraph({
+          text: line.slice(2),
+          bullet: { level: 0 },
+        })
+      );
+    }
+    // Numbered list
+    else if (/^\d+\. /.test(line)) {
+      paragraphs.push(
+        new Paragraph({
+          text: line.replace(/^\d+\. /, ""),
+          numbering: { reference: "default-numbering", level: 0 },
+        })
+      );
+    }
+    // Bold/italic inline — strip markdown markers for simplicity
+    else if (line.trim() === "") {
+      paragraphs.push(new Paragraph({ text: "" }));
+    } else {
+      // Parse inline bold (**text**) and italic (*text*)
+      const runs: TextRun[] = [];
+      const parts = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+      for (const part of parts) {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          runs.push(new TextRun({ text: part.slice(2, -2), bold: true }));
+        } else if (part.startsWith("*") && part.endsWith("*")) {
+          runs.push(new TextRun({ text: part.slice(1, -1), italics: true }));
+        } else if (part) {
+          runs.push(new TextRun({ text: part }));
+        }
+      }
+      paragraphs.push(new Paragraph({ children: runs }));
+    }
+  }
 
-function body(text: string) {
-  return new Paragraph({
-    children: [new TextRun({ text, size: 22 })],
-    spacing: { after: 120 },
-  });
-}
-
-function tableHeaderCell(text: string) {
-  return new TableCell({
-    children: [
-      new Paragraph({
-        children: [new TextRun({ text, bold: true, color: "FFFFFF", size: 20 })],
-      }),
-    ],
-    shading: { type: ShadingType.SOLID, color: INDIGO, fill: INDIGO },
-    margins: { top: 60, bottom: 60, left: 100, right: 100 },
-  });
-}
-
-function tableCell(text: string, bold = false) {
-  return new TableCell({
-    children: [
-      new Paragraph({
-        children: [new TextRun({ text, bold, size: 20 })],
-      }),
-    ],
-    margins: { top: 60, bottom: 60, left: 100, right: 100 },
-  });
-}
-
-function fmt(n: number, currency: string) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
+  return paragraphs;
 }
 
 export async function GET(
@@ -76,249 +86,137 @@ export async function GET(
 
   const proposal = await prisma.proposal.findFirst({
     where: { id, userId: session.user.id },
+    include: {
+      signature: { select: { signerName: true, signedAt: true } },
+    },
   });
 
   if (!proposal) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const p = proposal.content as unknown as ProposalStructure;
-  const currency = p.currency ?? "USD";
+  const currency = proposal.currency ?? "USD";
+  const amountFormatted = proposal.totalAmount
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
+        proposal.totalAmount
+      )
+    : null;
 
-  const coverParagraphs = [
+  const headerRows: Paragraph[] = [
+    new Paragraph({
+      text: proposal.title,
+      heading: HeadingLevel.TITLE,
+      alignment: AlignmentType.LEFT,
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Prepared for: ", bold: true }),
+        new TextRun({ text: proposal.clientName }),
+      ],
+    }),
+    ...(amountFormatted
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Total Investment: ", bold: true }),
+              new TextRun({ text: amountFormatted, bold: true }),
+            ],
+          }),
+        ]
+      : []),
+    ...(proposal.validUntil
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Valid Until: ", bold: true }),
+              new TextRun({
+                text: new Date(proposal.validUntil).toLocaleDateString(),
+              }),
+            ],
+          }),
+        ]
+      : []),
+    new Paragraph({ text: "" }),
+    new Paragraph({
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+      },
+      text: "",
+    }),
+    new Paragraph({ text: "" }),
+  ];
+
+  const contentParagraphs = markdownToDocx(proposal.content);
+
+  const footerRows: Paragraph[] = [
+    new Paragraph({ text: "" }),
+    new Paragraph({
+      border: {
+        top: { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" },
+      },
+      text: "",
+    }),
+    ...(proposal.signature
+      ? [
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Accepted by: ", bold: true }),
+              new TextRun({ text: proposal.signature.signerName }),
+              new TextRun({ text: " on " }),
+              new TextRun({
+                text: new Date(proposal.signature.signedAt).toLocaleDateString(),
+              }),
+            ],
+          }),
+        ]
+      : []),
     new Paragraph({
       children: [
         new TextRun({
-          text: p.title ?? proposal.title,
-          bold: true,
-          size: 52,
-          color: "FFFFFF",
+          text: "Generated by ProposalForge",
+          color: "999999",
+          size: 18,
         }),
       ],
-      spacing: { before: convertInchesToTwip(1), after: 240 },
     }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: "Prepared for  ", size: 24, color: "C7D2FE" }),
-        new TextRun({ text: p.clientName, size: 24, bold: true, color: "FFFFFF" }),
-      ],
-      spacing: { after: 120 },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: "By  ", size: 24, color: "C7D2FE" }),
-        new TextRun({ text: p.freelancerName, size: 24, bold: true, color: "FFFFFF" }),
-      ],
-      spacing: { after: 120 },
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: p.date, size: 22, color: "A5B4FC" })],
-      spacing: { after: 0 },
-    }),
-    // Page break after cover
-    new Paragraph({ children: [], pageBreakBefore: true }),
   ];
 
-  const bodyChildren = [];
-
-  if (p.executiveSummary) {
-    bodyChildren.push(heading("Executive Summary"), body(p.executiveSummary));
-  }
-  if (p.problem) {
-    bodyChildren.push(heading("Problem / Opportunity"), body(p.problem));
-  }
-  if (p.solution) {
-    bodyChildren.push(heading("Proposed Solution"), body(p.solution));
-  }
-
-  if (p.scopeOfWork?.length) {
-    bodyChildren.push(heading("Scope of Work"));
-    bodyChildren.push(
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: {
-          top: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
-          insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              tableHeaderCell("Deliverable"),
-              tableHeaderCell("Description"),
-            ],
-            tableHeader: true,
-          }),
-          ...p.scopeOfWork.map(
-            (r) =>
-              new TableRow({
-                children: [tableCell(r.deliverable), tableCell(r.description)],
-              })
-          ),
-        ],
-      })
-    );
-  }
-
-  if (p.timeline?.length) {
-    bodyChildren.push(heading("Implementation Timeline"));
-    bodyChildren.push(
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: {
-          top: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
-          insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              tableHeaderCell("Phase"),
-              tableHeaderCell("Duration"),
-              tableHeaderCell("Description"),
-            ],
-            tableHeader: true,
-          }),
-          ...p.timeline.map(
-            (r) =>
-              new TableRow({
-                children: [
-                  tableCell(r.phase),
-                  tableCell(r.duration),
-                  tableCell(r.description),
-                ],
-              })
-          ),
-        ],
-      })
-    );
-  }
-
-  if (p.pricing?.length) {
-    bodyChildren.push(heading("Investment"));
-    const grandTotal = p.pricing.reduce((s, r) => s + (r.total ?? 0), 0);
-    bodyChildren.push(
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: {
-          top: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          bottom: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          left: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          right: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          // @ts-expect-error docx v9 type mismatch — insideH is valid at runtime
-          insideH: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-          insideV: { style: BorderStyle.SINGLE, size: 1, color: "E5E7EB" },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              tableHeaderCell("Item"),
-              tableHeaderCell("Qty"),
-              tableHeaderCell("Rate"),
-              tableHeaderCell("Total"),
-            ],
-            tableHeader: true,
-          }),
-          ...p.pricing.map(
-            (r) =>
-              new TableRow({
-                children: [
-                  tableCell(r.item),
-                  tableCell(String(r.qty)),
-                  tableCell(fmt(r.rate, currency), false),
-                  tableCell(fmt(r.total, currency), false),
-                ],
-              })
-          ),
-          new TableRow({
-            children: [
-              new TableCell({
-                columnSpan: 3,
-                children: [
-                  new Paragraph({
-                    alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: "Grand Total", bold: true, size: 22 })],
-                  }),
-                ],
-                shading: { type: ShadingType.SOLID, color: "EEF2FF", fill: "EEF2FF" },
-                margins: { top: 60, bottom: 60, left: 100, right: 100 },
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    alignment: AlignmentType.RIGHT,
-                    children: [
-                      new TextRun({
-                        text: fmt(grandTotal, currency),
-                        bold: true,
-                        size: 22,
-                      }),
-                    ],
-                  }),
-                ],
-                shading: { type: ShadingType.SOLID, color: "EEF2FF", fill: "EEF2FF" },
-                margins: { top: 60, bottom: 60, left: 100, right: 100 },
-              }),
-            ],
-          }),
-        ],
-      })
-    );
-  }
-
-  if (p.terms) {
-    bodyChildren.push(heading("Terms and Assumptions"), body(p.terms));
-  }
-  if (p.nextSteps) {
-    bodyChildren.push(heading("Next Steps"), body(p.nextSteps));
-  }
-
   const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: {
-            margin: {
-              top: convertInchesToTwip(1),
-              right: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1),
-            },
-          },
-        },
-        children: [...coverParagraphs, ...bodyChildren],
-      },
-    ],
-    styles: {
-      paragraphStyles: [
+    numbering: {
+      config: [
         {
-          id: "Heading1",
-          name: "Heading 1",
-          basedOn: "Normal",
-          next: "Normal",
-          run: { size: 26, bold: true, color: INDIGO },
-          paragraph: { spacing: { before: 280, after: 120 } },
+          reference: "default-numbering",
+          levels: [
+            {
+              level: 0,
+              format: "decimal",
+              text: "%1.",
+              alignment: AlignmentType.LEFT,
+            },
+          ],
         },
       ],
     },
+    sections: [
+      {
+        children: [...headerRows, ...contentParagraphs, ...footerRows],
+      },
+    ],
   });
 
   const buffer = await Packer.toBuffer(doc);
+  // Copy into a plain ArrayBuffer for Response compatibility
+  const arrayBuffer: ArrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer;
 
-  const safeName = (p.title ?? proposal.title)
-    .replace(/[^a-z0-9]/gi, "-")
-    .replace(/-+/g, "-")
-    .toLowerCase();
+  const safeName = proposal.title
+    .replace(/[^a-z0-9]+/gi, "-")
+    .toLowerCase()
+    .slice(0, 60);
 
-  return new Response(new Uint8Array(buffer), {
+  return new Response(arrayBuffer, {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

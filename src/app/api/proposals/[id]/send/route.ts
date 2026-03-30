@@ -51,7 +51,6 @@ export async function POST(
     where: { id },
     data: {
       clientEmail: email,
-      sentAt: new Date(),
       status: "SENT",
     },
   });

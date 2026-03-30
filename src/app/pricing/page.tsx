@@ -3,26 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import LaunchBanner from "@/components/LaunchBanner";
+
+const NEW_PRO_FEATURES = [
+  { icon: "📧", text: "Email alerts when clients view, sign & pay" },
+  { icon: "📊", text: "Proposal analytics — see who viewed and when" },
+  { icon: "🎨", text: "Custom logo on client portal" },
+  { icon: "✨", text: "Remove ProposalForge branding" },
+];
 
 const PLANS = [
   {
     tier: "FREE",
     name: "Free",
     price: 0,
-    tagline: "Try it out — no card required",
+    tagline: "Try it out",
     features: [
       "3 proposals/month",
-      "AI proposal generation",
-      "Shareable client portal",
-      "E-signature collection",
-      "1 user",
-    ],
-    notIncluded: [
-      "Email notifications",
-      "PDF/DOCX export",
-      "Custom branding",
-      "Payment requests",
+      "AI generation",
+      "Client portal",
+      "E-signature",
     ],
     cta: "Get started",
     highlighted: false,
@@ -34,14 +33,11 @@ const PLANS = [
     tagline: "For active freelancers",
     features: [
       "Unlimited proposals",
-      "AI proposal generation",
-      "Shareable client portal",
-      "E-signature collection",
-      "Email notifications",
-      "PDF & DOCX export",
+      "AI generation",
+      "Client portal",
+      "E-signature",
       "1 user",
     ],
-    notIncluded: [],
     cta: "Start Solo",
     highlighted: false,
   },
@@ -52,16 +48,13 @@ const PLANS = [
     tagline: "For serious earners",
     features: [
       "Everything in Solo",
-      "Unlimited proposals",
-      "Email notifications",
-      "PDF & DOCX export",
-      "Custom portal branding",
       "Stripe payment requests",
-      "Analytics dashboard",
+      { text: "Email alerts when clients view, sign & pay", isNew: true },
+      { text: "Proposal analytics — see who viewed and when", isNew: true },
+      { text: "Custom logo on client portal", isNew: true },
+      { text: "Remove ProposalForge branding", isNew: true },
       "Priority support",
-      "1 user",
     ],
-    notIncluded: [],
     cta: "Start Pro",
     highlighted: true,
   },
@@ -74,48 +67,20 @@ const PLANS = [
       "Everything in Pro",
       "5 seats",
       "White-label portal",
-      "Team analytics",
-      "Priority support",
+      "Dedicated support",
     ],
-    notIncluded: [],
     cta: "Start Agency",
     highlighted: false,
   },
 ];
 
-const FAQ = [
-  {
-    q: "Is my data secure?",
-    a: "Yes. All data is encrypted in transit (HTTPS) and at rest. We use industry-standard security practices. Payment data is handled entirely by Stripe — we never store your card details.",
-  },
-  {
-    q: "Can I use my own branding on the client portal?",
-    a: "Custom branding (your logo and colors on the client portal) is available on the Pro and Agency plans. Free and Solo plans use the default ProposalForge branding.",
-  },
-  {
-    q: "What payment methods do you accept?",
-    a: "We accept all major credit and debit cards (Visa, Mastercard, American Express) via Stripe. Annual plans are charged upfront at checkout.",
-  },
-  {
-    q: "Can I cancel anytime?",
-    a: "Yes. You can cancel your subscription at any time from your account settings. Your plan stays active until the end of the current billing period. We don't issue refunds for partial periods.",
-  },
-  {
-    q: "Does my client need an account to view or sign a proposal?",
-    a: "No. Clients receive a unique link and can view, sign, and pay directly from their browser with no account required.",
-  },
-  {
-    q: "What happens when I hit my 3 proposal limit on the free plan?",
-    a: "You can still view and share existing proposals. To create new ones, you'll need to upgrade to a paid plan or wait until your monthly limit resets at the start of the next calendar month.",
-  },
-];
+type Feature = string | { text: string; isNew: boolean };
 
 export default function PricingPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [annual, setAnnual] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   async function handleUpgrade(tier: string) {
     if (tier === "FREE") return;
@@ -144,7 +109,6 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
-      <LaunchBanner />
       <nav className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
         <Link href="/" className="text-xl font-bold text-indigo-600">
           ProposalForge
@@ -186,6 +150,24 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* New Pro features callout */}
+        <div className="bg-indigo-600 rounded-2xl p-6 text-left">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="bg-white text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+              New in Pro
+            </span>
+            <p className="text-indigo-100 text-sm">Just launched — 4 powerful features now included</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {NEW_PRO_FEATURES.map((f) => (
+              <div key={f.text} className="bg-white/10 rounded-xl p-4 space-y-2">
+                <span className="text-2xl">{f.icon}</span>
+                <p className="text-white text-sm font-medium leading-snug">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 max-w-md mx-auto">
             {error}
@@ -198,7 +180,7 @@ export default function PricingPage() {
               key={plan.tier}
               className={`rounded-2xl border p-6 space-y-5 ${
                 plan.highlighted
-                  ? "border-indigo-500 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500"
+                  ? "border-indigo-500 shadow-lg shadow-indigo-100 ring-1 ring-indigo-500 bg-indigo-50/30"
                   : "border-gray-200 bg-white"
               }`}
             >
@@ -220,18 +202,22 @@ export default function PricingPage() {
                 )}
               </div>
               <ul className="space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-green-500 mt-0.5">✓</span>
-                    {f}
-                  </li>
-                ))}
-                {plan.notIncluded.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-400">
-                    <span className="mt-0.5">–</span>
-                    {f}
-                  </li>
-                ))}
+                {(plan.features as Feature[]).map((f) => {
+                  const isObj = typeof f === "object";
+                  const text = isObj ? f.text : f;
+                  const isNew = isObj && f.isNew;
+                  return (
+                    <li key={text} className="flex items-start gap-2 text-sm text-gray-600">
+                      <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                      <span className="flex-1">{text}</span>
+                      {isNew && (
+                        <span className="shrink-0 bg-indigo-100 text-indigo-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                          New
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <button
                 onClick={() => handleUpgrade(plan.tier)}
@@ -260,40 +246,7 @@ export default function PricingPage() {
           All plans include SSL, uptime SLA, and standard support.
           Cancel anytime. Annual plans save 2 months.
         </p>
-
-        {/* FAQ */}
-        <div className="max-w-2xl mx-auto text-left pt-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Frequently asked questions
-          </h2>
-          <div className="space-y-3">
-            {FAQ.map((item, i) => (
-              <div key={i} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left"
-                >
-                  <span className="text-sm font-medium text-gray-900">{item.q}</span>
-                  <span className={`text-gray-400 transition-transform text-lg leading-none ${openFaq === i ? "rotate-45" : ""}`}>+</span>
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">
-                    {item.a}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
-
-      <footer className="border-t py-8 text-center text-xs text-gray-400">
-        © 2025 ProposalForge ·{" "}
-        <Link href="/terms" className="hover:underline">Terms</Link>{" "}·{" "}
-        <Link href="/privacy" className="hover:underline">Privacy</Link>{" "}·{" "}
-        <Link href="/contact" className="hover:underline">Contact</Link>{" "}·{" "}
-        <Link href="/pricing" className="hover:underline">Pricing</Link>
-      </footer>
     </div>
   );
 }

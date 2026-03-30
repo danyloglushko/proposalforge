@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import ProposalDocument from "@/components/ProposalDocument";
-import type { ProposalStructure } from "@/types/proposal";
+import ReactMarkdown from "react-markdown";
 
 interface Branding {
   logoUrl: string | null;
@@ -14,7 +13,7 @@ interface Proposal {
   id: string;
   title: string;
   clientName: string;
-  content: ProposalStructure;
+  content: string;
   totalAmount: number | null;
   currency: string;
   validUntil: string | null;
@@ -22,7 +21,7 @@ interface Proposal {
   signature: { signerName: string; signedAt: string } | null;
   payment: { status: string; amount: number } | null;
   publicToken: string;
-  branding: Branding;
+  branding?: Branding;
 }
 
 export default function ClientPortalPage() {
@@ -57,11 +56,7 @@ export default function ClientPortalPage() {
       const res = await fetch(`/api/proposals/${proposal.id}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          signerName,
-          signerEmail,
-          publicToken: token,
-        }),
+        body: JSON.stringify({ signerName, signerEmail, publicToken: token }),
       });
       if (res.ok) {
         setSigned(true);
@@ -85,25 +80,16 @@ export default function ClientPortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
-        <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
-        <p className="text-sm text-gray-400">Loading your proposal…</p>
       </div>
     );
   }
 
-  if (error || !proposal) {
+  if (!proposal) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 px-6 text-center">
-        <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-sm shadow-sm space-y-3">
-          <div className="text-4xl">🔍</div>
-          <h2 className="text-lg font-semibold text-gray-900">Proposal not found</h2>
-          <p className="text-sm text-gray-500">
-            {error ?? "This link may have expired or been revoked. Contact the sender for a new link."}
-          </p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500 text-lg">{error ?? "Proposal not found"}</p>
       </div>
     );
   }
@@ -112,63 +98,101 @@ export default function ClientPortalPage() {
   const isPaid = proposal.payment?.status === "PAID";
   const isDeclined = proposal.status === "DECLINED";
   const branding = proposal.branding ?? { logoUrl: null, hidePoweredBy: false };
+  const isExpired =
+    !!proposal.validUntil && new Date(proposal.validUntil) < new Date();
+
+  const statusLabel = isPaid
+    ? "Paid"
+    : isSigned
+    ? "Accepted"
+    : isDeclined
+    ? "Declined"
+    : isExpired
+    ? "Expired"
+    : "Awaiting Review";
+
+  const statusClass =
+    isSigned || isPaid
+      ? "bg-green-100 text-green-700"
+      : isDeclined
+      ? "bg-red-100 text-red-700"
+      : isExpired
+      ? "bg-orange-100 text-orange-700"
+      : "bg-yellow-100 text-yellow-700";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 print:bg-white">
+      {/* Header — hidden when printing */}
+      <div className="bg-white border-b px-6 py-4 flex items-center justify-between print:hidden">
         {branding.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={branding.logoUrl}
             alt="Company logo"
             className="h-8 object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
           <span className="text-xl font-bold text-indigo-600">ProposalForge</span>
         )}
-        {proposal.status && (
-          <span
-            className={`px-3 py-1 rounded-full text-sm font-medium ${
-              isSigned || isPaid
-                ? "bg-green-100 text-green-700"
-                : isDeclined
-                ? "bg-red-100 text-red-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
-          >
-            {isPaid ? "Paid" : isSigned ? "Accepted" : isDeclined ? "Declined" : "Awaiting Review"}
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusClass}`}>
+            {statusLabel}
           </span>
-        )}
+          <button
+            onClick={() => window.print()}
+            className="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition"
+          >
+            Download PDF
+          </button>
+        </div>
       </div>
 
-      <div id="top" className="max-w-3xl mx-auto w-full px-6 pb-32 pt-12 space-y-8 flex-1">
+      <div id="top" className="max-w-3xl mx-auto px-6 pb-32 pt-12 space-y-8 print:px-0 print:py-4 print:space-y-6 print:pb-8">
         {paymentSuccess && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 print:hidden">
             Payment received — thank you!
           </div>
         )}
 
+        {isExpired && !isSigned && !isPaid && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-orange-800 print:hidden">
+            This proposal expired on{" "}
+            {new Date(proposal.validUntil!).toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+            . Please contact the sender for an updated version.
+          </div>
+        )}
+
         {/* Proposal content */}
-        <div className="bg-white rounded-xl shadow-sm border p-8">
+        <div className="bg-white rounded-xl shadow-sm border p-8 print:shadow-none print:border-none print:p-0">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{proposal.title}</h1>
+          <p className="text-gray-500 text-sm">Prepared for {proposal.clientName}</p>
           {proposal.validUntil && (
-            <p className="text-xs text-amber-600 font-medium mb-4">
+            <p
+              className={`text-xs font-medium mt-1 mb-4 ${
+                isExpired ? "text-orange-500" : "text-amber-600"
+              }`}
+            >
               Valid until{" "}
               {new Date(proposal.validUntil).toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
                 year: "numeric",
               })}
+              {isExpired ? " (expired)" : ""}
             </p>
           )}
 
           {proposal.totalAmount && (
-            <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-              <p className="text-sm text-indigo-600 font-medium">Total Investment</p>
-              <p className="text-2xl font-bold text-indigo-900">
+            <div className="mb-8 p-4 bg-indigo-50 rounded-lg print:bg-gray-50 print:border print:border-gray-200">
+              <p className="text-sm text-indigo-600 font-medium print:text-gray-600">
+                Total Investment
+              </p>
+              <p className="text-2xl font-bold text-indigo-900 print:text-gray-900">
                 {new Intl.NumberFormat("en-US", {
                   style: "currency",
                   currency: proposal.currency,
@@ -177,15 +201,64 @@ export default function ClientPortalPage() {
             </div>
           )}
 
-          <ProposalDocument proposal={proposal.content} />
+          {/* Rendered Markdown */}
+          <div className="prose prose-gray max-w-none">
+            <ReactMarkdown>{proposal.content}</ReactMarkdown>
+          </div>
         </div>
 
-        {/* E-signature block */}
-        {!isSigned && !isDeclined && (
-          <div id="accept-proposal" className="bg-white rounded-xl shadow-sm border p-8">
+        {/* Accepted confirmation */}
+        {isSigned && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center space-y-3">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-green-900">Proposal Accepted</h3>
+            <p className="text-sm text-green-700">
+              Signed by <strong>{proposal.signature?.signerName}</strong> on{" "}
+              {proposal.signature?.signedAt
+                ? new Date(proposal.signature.signedAt).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "today"}
+            </p>
+            <p className="text-xs text-green-600">
+              A copy of this agreement has been recorded.
+            </p>
+          </div>
+        )}
+
+        {/* E-signature form */}
+        {!isSigned && !isDeclined && !isExpired && (
+          <div id="accept-proposal" className="bg-white rounded-xl shadow-sm border p-8 print:hidden">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Accept This Proposal
             </h2>
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-2 text-red-400 hover:text-red-600 font-bold text-lg leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
             <form onSubmit={handleSign} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -214,8 +287,8 @@ export default function ClientPortalPage() {
                 />
               </div>
               <p className="text-xs text-gray-500">
-                By clicking &ldquo;Accept Proposal&rdquo; you confirm acceptance of the
-                terms outlined above. This constitutes a legally binding agreement.
+                By clicking &ldquo;Accept Proposal&rdquo; you confirm acceptance of
+                the terms outlined above. This constitutes a legally binding agreement.
               </p>
               <button
                 type="submit"
@@ -227,33 +300,36 @@ export default function ClientPortalPage() {
             </form>
           </div>
         )}
-
-        {isSigned && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center space-y-3">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-green-900">Proposal Accepted</h3>
-            <p className="text-sm text-green-700">
-              Signed by <strong>{proposal.signature?.signerName}</strong> on{" "}
-              {proposal.signature?.signedAt
-                ? new Date(proposal.signature.signedAt).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "today"}
-            </p>
-            <p className="text-xs text-green-600">A copy of this agreement has been recorded.</p>
-          </div>
-        )}
       </div>
 
-      {/* Footer */}
+      {/* Sticky Accept CTA — hidden when printing */}
+      {!isSigned && !isDeclined && !isExpired && (
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t shadow-lg px-6 py-4 flex items-center justify-between z-10 print:hidden">
+          <div>
+            {proposal.totalAmount && (
+              <p className="text-sm font-semibold text-gray-900">
+                {new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: proposal.currency,
+                }).format(proposal.totalAmount)}
+              </p>
+            )}
+            <p className="text-xs text-gray-500">
+              Scroll to review, then accept below
+            </p>
+          </div>
+          <a
+            href="#accept-proposal"
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+          >
+            Accept Proposal
+          </a>
+        </div>
+      )}
+
+      {/* Powered by footer (free tier) */}
       {!branding.hidePoweredBy && (
-        <div className="border-t bg-white py-4 text-center">
+        <div className="border-t bg-white py-3 text-center print:hidden">
           <a
             href="https://proposalforge.com"
             target="_blank"
@@ -265,31 +341,10 @@ export default function ClientPortalPage() {
         </div>
       )}
 
-      {/* Sticky Accept CTA */}
-      {!isSigned && !isDeclined && (
-        <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur border-t shadow-xl px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            {proposal.totalAmount && (
-              <p className="text-base font-bold text-gray-900">
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: proposal.currency,
-                }).format(proposal.totalAmount)}
-              </p>
-            )}
-            <p className="text-xs text-gray-400 mt-0.5">Review above, then sign below</p>
-          </div>
-          <a
-            href="#accept-proposal"
-            className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition shadow-md shadow-indigo-200 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            Accept Proposal
-          </a>
-        </div>
-      )}
+      {/* Print footer */}
+      <div className="hidden print:block text-center text-xs text-gray-400 py-8 border-t mt-8">
+        Generated by ProposalForge
+      </div>
     </div>
   );
 }

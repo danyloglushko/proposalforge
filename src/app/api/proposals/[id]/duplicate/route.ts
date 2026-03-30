@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 
 export async function POST(
   _req: Request,
@@ -30,7 +29,7 @@ export async function POST(
       clientName: proposal.clientName,
       clientEmail: proposal.clientEmail,
       jobBrief: proposal.jobBrief,
-      content: proposal.content as Prisma.InputJsonValue,
+      content: proposal.content,
       totalAmount: proposal.totalAmount,
       currency: proposal.currency,
       validUntil: proposal.validUntil,

@@ -1,10 +1,8 @@
 import Link from "next/link";
-import LaunchBanner from "@/components/LaunchBanner";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      <LaunchBanner />
       {/* Nav */}
       <nav className="flex items-center justify-between max-w-6xl mx-auto px-6 py-5">
         <span className="text-2xl font-bold text-indigo-600">ProposalForge</span>
@@ -23,6 +21,19 @@ export default function Home() {
           </Link>
         </div>
       </nav>
+
+      {/* Trust bar */}
+      <div className="bg-indigo-50 border-b border-indigo-100 py-3">
+        <div className="max-w-6xl mx-auto px-6 flex flex-wrap items-center justify-center gap-6 text-sm text-indigo-700 font-medium">
+          <span>2,000+ freelancers</span>
+          <span className="text-indigo-300">·</span>
+          <span>18,000+ proposals sent</span>
+          <span className="text-indigo-300">·</span>
+          <span>$4.2M in deals closed</span>
+          <span className="text-indigo-300">·</span>
+          <span>Avg &lt;10 min to create</span>
+        </div>
+      </div>
 
       {/* Hero */}
       <div className="max-w-4xl mx-auto px-6 py-20 text-center space-y-6">
@@ -56,23 +67,6 @@ export default function Home() {
         <p className="text-sm text-gray-400">
           Free plan · 3 proposals/month · No credit card
         </p>
-      </div>
-
-      {/* Social Proof Trust Bar */}
-      <div className="border-y border-gray-100 bg-white/60 py-5">
-        <div className="max-w-4xl mx-auto px-6 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500">
-          {[
-            { value: "2,000+", label: "freelancers using ProposalForge" },
-            { value: "18,000+", label: "proposals sent" },
-            { value: "$4.2M+", label: "in client contracts closed" },
-            { value: "< 10 min", label: "average time to first proposal" },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-lg font-bold text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Features */}
@@ -133,42 +127,59 @@ export default function Home() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { quote: "I used to spend 2 hours on every proposal. Now it's 8 minutes. Won 3 clients this week.", name: "Alex M.", role: "Freelance Developer" },
-            { quote: "The client portal is what seals the deal. Clients love being able to sign right there.", name: "Sarah K.", role: "Brand Designer" },
-            { quote: "Collected a $2,400 deposit within an hour of sending. Never had that happen before.", name: "James R.", role: "Marketing Consultant" },
+            { quote: "I used to spend 2 hours on every proposal. Now it's 8 minutes. Won 3 clients this week.", name: "Alex M.", role: "Freelance Developer", initials: "AM" },
+            { quote: "The client portal is what seals the deal. Clients love being able to sign right there.", name: "Sarah K.", role: "Brand Designer", initials: "SK" },
+            { quote: "Collected a $2,400 deposit within an hour of sending. Never had that happen before.", name: "James R.", role: "Marketing Consultant", initials: "JR" },
           ].map((t) => (
             <div key={t.name} className="bg-white rounded-2xl border p-6 shadow-sm space-y-3">
-              <div className="flex gap-0.5 text-amber-400 text-sm">{"★★★★★"}</div>
+              <div className="text-yellow-400 text-sm">★★★★★</div>
               <p className="text-gray-700 text-sm leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                <p className="text-gray-400 text-xs">{t.role}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  {t.initials}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+                  <p className="text-gray-400 text-xs">{t.role}</p>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Final CTA */}
-      <div className="max-w-2xl mx-auto px-6 py-16 text-center space-y-4">
-        <h2 className="text-3xl font-bold text-gray-900">Ready to win more?</h2>
-        <p className="text-gray-500">Create your first proposal in under 2 minutes. Free, no card required.</p>
-        <Link
-          href="/login"
-          className="inline-block bg-indigo-600 text-white px-10 py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"
-        >
-          Get started for free →
-        </Link>
+      {/* Mid-page CTA */}
+      <div className="bg-indigo-700 py-16 px-6 text-center">
+        <div className="max-w-2xl mx-auto space-y-4">
+          <h2 className="text-3xl font-bold text-white">Ready to win your next client?</h2>
+          <p className="text-indigo-200 text-lg">Start for free — 3 proposals/month on the free plan</p>
+          <Link
+            href="/login"
+            className="inline-block bg-white text-indigo-700 font-semibold px-8 py-4 rounded-xl hover:bg-indigo-50 transition shadow-lg mt-2"
+          >
+            Get started free →
+          </Link>
+        </div>
       </div>
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-xs text-gray-400">
         © 2025 ProposalForge ·{" "}
-        <Link href="/pricing" className="hover:underline">Pricing</Link>{" "}·{" "}
-        <Link href="/terms" className="hover:underline">Terms</Link>{" "}·{" "}
-        <Link href="/privacy" className="hover:underline">Privacy</Link>{" "}·{" "}
-        <Link href="/contact" className="hover:underline">Contact</Link>{" "}·{" "}
-        <Link href="/login" className="hover:underline">Sign in</Link>
+        <Link href="/pricing" className="hover:underline">
+          Pricing
+        </Link>{" "}
+        ·{" "}
+        <Link href="/login" className="hover:underline">
+          Sign in
+        </Link>{" "}
+        ·{" "}
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>{" "}
+        ·{" "}
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
       </footer>
     </div>
   );
