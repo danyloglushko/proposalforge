@@ -98,9 +98,9 @@ export default async function DashboardPage({
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: "Total proposals", value: stats.total },
-            { label: "Sent", value: stats.sent },
-            { label: "Accepted", value: stats.accepted },
+            { label: "Total proposals", value: stats.total, icon: "📄" },
+            { label: "Sent", value: stats.sent, icon: "📤" },
+            { label: "Accepted", value: stats.accepted, icon: "✅" },
             {
               label: "Revenue collected",
               value: new Intl.NumberFormat("en-US", {
@@ -108,13 +108,15 @@ export default async function DashboardPage({
                 currency: "USD",
                 maximumFractionDigits: 0,
               }).format(stats.revenue),
+              icon: "💰",
             },
           ].map((stat) => (
             <div
               key={stat.label}
-              className="bg-white rounded-xl border p-5 shadow-sm"
+              className="bg-white rounded-xl border p-5 shadow-sm hover:shadow-md transition-shadow"
             >
-              <p className="text-sm text-gray-500">{stat.label}</p>
+              <span className="text-2xl">{stat.icon}</span>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mt-2">{stat.label}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {stat.value}
               </p>
@@ -128,17 +130,23 @@ export default async function DashboardPage({
             {user?.planTier ?? "FREE"} plan
           </span>
           {user?.planTier === "FREE" && (
-            <>
-              <span className="text-sm text-gray-500">
-                {user.proposalsThisMonth}/3 proposals this month
-              </span>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="flex-1 max-w-xs">
+                <p className="text-xs text-gray-500 mb-1">{user.proposalsThisMonth}/3 proposals this month</p>
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full ${(user.proposalsThisMonth ?? 0) >= 3 ? "bg-red-500" : "bg-indigo-600"}`}
+                    style={{ width: `${Math.min(100, ((user.proposalsThisMonth ?? 0) / 3) * 100)}%` }}
+                  />
+                </div>
+              </div>
               <Link
                 href="/pricing"
-                className="text-sm text-indigo-600 hover:underline font-medium"
+                className="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition font-medium"
               >
-                Upgrade →
+                Upgrade plan
               </Link>
-            </>
+            </div>
           )}
         </div>
 

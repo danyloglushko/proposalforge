@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -118,7 +119,10 @@ export default function LoginPage() {
         </Suspense>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          By signing in you agree to our Terms of Service and Privacy Policy.
+          By signing in you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+          {" "}and{" "}
+          <Link href="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>.
         </p>
       </div>
     </div>
