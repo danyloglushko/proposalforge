@@ -10,8 +10,18 @@ export default function DeleteProposalButton({ id }: { id: string }) {
 
   async function handleDelete() {
     setLoading(true);
-    await fetch(`/api/proposals/${id}`, { method: "DELETE" });
-    router.refresh();
+    try {
+      const res = await fetch(`/api/proposals/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        setLoading(false);
+        setConfirming(false);
+      }
+    } catch {
+      setLoading(false);
+      setConfirming(false);
+    }
   }
 
   if (confirming) {
