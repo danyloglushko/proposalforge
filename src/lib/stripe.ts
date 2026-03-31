@@ -47,7 +47,7 @@ export const PLANS: Record<
   },
   SOLO: {
     name: "Solo",
-    price: 39,
+    price: 9,
     priceId: process.env.STRIPE_SOLO_PRICE_ID ?? null,
     proposalsPerMonth: -1,
     features: [
@@ -63,7 +63,7 @@ export const PLANS: Record<
   },
   PRO: {
     name: "Pro",
-    price: 79,
+    price: 29,
     priceId: process.env.STRIPE_PRO_PRICE_ID ?? null,
     proposalsPerMonth: -1,
     features: [
@@ -78,7 +78,7 @@ export const PLANS: Record<
   },
   AGENCY: {
     name: "Agency",
-    price: 149,
+    price: 49,
     priceId: process.env.STRIPE_AGENCY_PRICE_ID ?? null,
     proposalsPerMonth: -1,
     features: [

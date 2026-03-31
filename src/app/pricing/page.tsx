@@ -29,7 +29,7 @@ const PLANS = [
   {
     tier: "SOLO",
     name: "Solo",
-    price: 39,
+    price: 9,
     tagline: "For active freelancers",
     features: [
       "Unlimited proposals",
@@ -44,7 +44,7 @@ const PLANS = [
   {
     tier: "PRO",
     name: "Pro",
-    price: 79,
+    price: 29,
     tagline: "For serious earners",
     features: [
       "Everything in Solo",
@@ -61,7 +61,7 @@ const PLANS = [
   {
     tier: "AGENCY",
     name: "Agency",
-    price: 149,
+    price: 49,
     tagline: "For small agencies",
     features: [
       "Everything in Pro",
