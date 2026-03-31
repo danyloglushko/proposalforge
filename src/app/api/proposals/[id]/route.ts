@@ -98,12 +98,17 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.$transaction([
-    prisma.proposalView.deleteMany({ where: { proposalId: id } }),
-    prisma.signature.deleteMany({ where: { proposalId: id } }),
-    prisma.payment.deleteMany({ where: { proposalId: id } }),
-    prisma.proposal.delete({ where: { id } }),
-  ]);
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.proposalView.deleteMany({ where: { proposalId: id } });
+      await tx.signature.deleteMany({ where: { proposalId: id } });
+      await tx.payment.deleteMany({ where: { proposalId: id } });
+      await tx.proposal.delete({ where: { id } });
+    });
+  } catch (err) {
+    console.error("DELETE /api/proposals/[id] failed:", err);
+    return NextResponse.json({ error: "Failed to delete proposal" }, { status: 500 });
+  }
 
   return new NextResponse(null, { status: 204 });
 }
