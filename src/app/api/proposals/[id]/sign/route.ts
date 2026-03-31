@@ -71,7 +71,6 @@ export async function POST(
   const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
   if (emailNotifications && proposal.user?.email) {
     const emailData = proposalSignedEmail({
-      to: proposal.user.email,
       proposalTitle: proposal.title,
       signerName,
       dashboardUrl: `${APP_URL}/dashboard/proposals/${id}`,
