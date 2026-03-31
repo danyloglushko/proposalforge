@@ -199,7 +199,6 @@ async function handleProposalPaymentCompleted(
   const emailNotifications = proposal.user?.profile?.emailNotifications ?? true;
   if (emailNotifications && proposal.user?.email && proposal.payment) {
     const emailData = paymentReceivedEmail({
-      to: proposal.user.email,
       proposalTitle: proposal.title,
       amount: proposal.payment.amount,
       currency: proposal.payment.currency,
