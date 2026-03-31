@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import DeleteProposalButton from "./DeleteProposalButton";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-600",
@@ -280,13 +281,16 @@ export default async function DashboardPage({
                       {new Date(p.updatedAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/p/${p.publicToken}`}
-                        target="_blank"
-                        className="text-indigo-500 hover:text-indigo-700 text-xs"
-                      >
-                        Client view ↗
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link
+                          href={`/p/${p.publicToken}`}
+                          target="_blank"
+                          className="text-indigo-500 hover:text-indigo-700 text-xs"
+                        >
+                          Client view ↗
+                        </Link>
+                        <DeleteProposalButton id={p.id} />
+                      </div>
                     </td>
                   </tr>
                 ))}
