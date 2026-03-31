@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx prisma migrate deploy && npx prisma generate && next build",
+  "buildCommand": "npx prisma migrate resolve --applied 20260328000000_init 2>/dev/null; npx prisma migrate deploy && npx prisma generate && next build",
   "installCommand": "npm install",
   "regions": ["iad1"]
 }
