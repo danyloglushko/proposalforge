@@ -98,7 +98,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.proposal.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.proposalView.deleteMany({ where: { proposalId: id } }),
+    prisma.signature.deleteMany({ where: { proposalId: id } }),
+    prisma.payment.deleteMany({ where: { proposalId: id } }),
+    prisma.proposal.delete({ where: { id } }),
+  ]);
 
   return new NextResponse(null, { status: 204 });
 }
